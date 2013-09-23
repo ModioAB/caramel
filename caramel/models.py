@@ -18,7 +18,7 @@ Base = declarative_base()
 
 
 class MyModel(Base):
-    __tablename__ = 'models'
+    __tablename__ = "models"
     id = Column(Integer, primary_key=True)
     name = Column(Text, unique=True)
     value = Column(Integer)
