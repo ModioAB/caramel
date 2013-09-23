@@ -1,0 +1,9 @@
+*.egg
+*.egg-info
+*.py[co]
+*.pt.py
+*.txt.py
+*~
+.*.swp
+*.sqlite
+.coverage*
