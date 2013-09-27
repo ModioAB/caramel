@@ -27,7 +27,7 @@ def main(global_config, **settings):
     DBSession.configure(bind=engine)
     Base.metadata.bind = engine
     config = Configurator(settings=settings)
-    config.add_static_view("static", "static", cache_max_age=3600)
-    config.add_route("home", "/")
+    config.add_route("csr", "/{sha256:[0-9a-f]{64}}", request_method="POST")
+    config.add_route("cert", "/{sha256:[0-9a-f]{64}}", request_method="GET")
     config.scan()
     return config.make_wsgi_app()
