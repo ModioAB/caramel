@@ -15,6 +15,8 @@ from sqlalchemy import (
     Column,
     Integer,
     Text,
+    CHAR,
+    String,
     )
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -32,15 +34,21 @@ from pyramid.decorator import reify
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
 
+# Upper bounds from RFC 5280
+_UB_CN_LEN = 64
+_UB_OU_LEN = 64
+
+# Length of hex digest of a sha256 checksum
+_SHA256_LEN = 64
 
 class CSR(Base):
     __tablename__ = "requests"
 
     id = Column(Integer, primary_key=True)
-    sha256sum = Column(Text, unique=True, nullable=False)
+    sha256sum = Column(CHAR(_SHA256_LEN), unique=True, nullable=False)
     pem = Column(Text, nullable=False)
-    orgunit = Column(Text)
-    commonname = Column(Text)
+    orgunit = Column(String(_UB_OU_LEN))
+    commonname = Column(String(_UB_CN_LEN))
 
     def __init__(self, sha256sum, reqtext):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
