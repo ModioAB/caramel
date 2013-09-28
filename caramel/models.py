@@ -71,3 +71,12 @@ class CSR(Base):
     def __json__(self, request):
         url = request.route_url("cert", sha256=self.sha256sum)
         return dict(sha256=self.sha256sum, url=url)
+
+    def __str__(self):
+        return (b"<{0.__class__.__name__} " # auto-concatenation (no comma)
+                b"sha256sum={0.sha256sum:8.8}... "
+                b"OU={0.orgunit!r} CN={0.commonname!r}>").format(self)
+
+    def __repr__(self):
+        return (b"<{0.__class__.__name__} id={0.id} " # (no comma)
+                b"sha256sum={0.sha256sum}>").format(self)
