@@ -17,6 +17,8 @@ from sqlalchemy import (
     Text,
     CHAR,
     String,
+    DateTime,
+    ForeignKey,
     )
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -24,12 +26,21 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import (
     scoped_session,
     sessionmaker,
+    relationship,
+    backref,
     )
 
 from zope.sqlalchemy import ZopeTransactionExtension
 
 from OpenSSL import crypto
 from pyramid.decorator import reify
+
+import datetime
+
+# XXX: probably error prone for cases where things are specified by string
+def foreignkeycol(referent, *args, **kwargs):
+    refcol = referent.property.columns[0]
+    return Column(refcol.type, ForeignKey(referent), *args, **kwargs)
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
@@ -49,6 +60,8 @@ class CSR(Base):
     pem = Column(Text, nullable=False)
     orgunit = Column(String(_UB_OU_LEN))
     commonname = Column(String(_UB_CN_LEN))
+    accessed = relationship("AccessLog", backref="csr",
+                            order_by="AccessLog.when.desc()")
 
     def __init__(self, sha256sum, reqtext):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
@@ -80,3 +93,25 @@ class CSR(Base):
     def __repr__(self):
         return (b"<{0.__class__.__name__} id={0.id} " # (no comma)
                 b"sha256sum={0.sha256sum}>").format(self)
+
+class AccessLog(Base):
+    __tablename__ = "accesslog"
+
+    id = Column(Integer, primary_key=True)
+    # XXX: name could be better
+    when = Column(DateTime, default=datetime.datetime.utcnow)
+    # XXX: name could be better, could perhaps be limited length,
+    #      might not want this nullable
+    addr = Column(Text)
+    csr_id = foreignkeycol(CSR.id, nullable=False)
+
+    def __init__(self, csr, addr):
+        self.csr = csr
+        self.addr = addr
+
+    def __str__(self):
+        return (b"<{0.__class__.__name__} id={0.id} "
+                b"csr={0.csr.sha256sum} when={0.when}>").format(self)
+
+    def __repr__(self):
+        return b"<{0.__class__.__name__} id={0.id}>".format(self)

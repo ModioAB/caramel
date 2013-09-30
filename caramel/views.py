@@ -24,6 +24,7 @@ from hashlib import sha256
 from .models import (
     DBSession,
     CSR,
+    AccessLog,
     )
 
 from sqlalchemy.exc import IntegrityError
@@ -86,7 +87,8 @@ def cert_fetch(request):
         csr = DBSession.query(CSR).filter_by(sha256sum=sha256sum).one()
     except NoResultFound:
         raise HTTPNotFound
-    # XXX: should add/update some sort of access log here
+    # XXX: Exceptions? remote_addr or client_addr?
+    DBSession.add(AccessLog(csr, request.remote_addr))
     # XXX: should check for cert here.
     #      for now, just say that the request has been accepted.
     request.response.status_int = 202
