@@ -11,6 +11,7 @@ del unicode_literals, print_function, absolute_import, division
 # ----- End header -----
 #
 
+from pyramid.response import Response
 from pyramid.httpexceptions import (
     HTTPLengthRequired,
     HTTPRequestEntityTooLarge,
@@ -20,6 +21,7 @@ from pyramid.httpexceptions import (
 from pyramid.view import view_config
 
 from hashlib import sha256
+from datetime import datetime
 
 from .models import (
     DBSession,
@@ -89,7 +91,12 @@ def cert_fetch(request):
         raise HTTPNotFound
     # XXX: Exceptions? remote_addr or client_addr?
     DBSession.add(AccessLog(csr, request.remote_addr))
-    # XXX: should check for cert here.
-    #      for now, just say that the request has been accepted.
+    if csr.certificates:
+        cert = csr.certificates[0]
+        if datetime.utcnow() < cert.not_after:
+            # XXX: appropriate content-type is ... ?
+            return Response(cert.pem,
+                            content_type="application/octet-stream",
+                            charset="UTF-8")
     request.response.status_int = 202
     return csr

@@ -62,6 +62,8 @@ class CSR(Base):
     commonname = Column(String(_UB_CN_LEN))
     accessed = relationship("AccessLog", backref="csr",
                             order_by="AccessLog.when.desc()")
+    certificates = relationship("Certificate", backref="csr",
+                                order_by="Certificate.not_after.desc()")
 
     def __init__(self, sha256sum, reqtext):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
@@ -112,6 +114,23 @@ class AccessLog(Base):
     def __str__(self):
         return (b"<{0.__class__.__name__} id={0.id} "
                 b"csr={0.csr.sha256sum} when={0.when}>").format(self)
+
+    def __repr__(self):
+        return b"<{0.__class__.__name__} id={0.id}>".format(self)
+
+class Certificate(Base):
+    __tablename__ = "certificates"
+
+    id = Column(Integer, primary_key=True)
+    pem = Column(Text, nullable=False)
+    # XXX: not_after might be enough
+    not_before = Column(DateTime, nullable=False)
+    not_after = Column(DateTime, nullable=False)
+    csr_id = foreignkeycol(CSR.id, nullable=False)
+
+    def __init__(self, *args, **kws):
+        # TODO: stuff
+        return
 
     def __repr__(self):
         return b"<{0.__class__.__name__} id={0.id}>".format(self)
