@@ -10,12 +10,12 @@ virtualenv-3.3  /srv/project/Environment
 
 
 
-chcon --ref /usr/bin/python  Environment/bin/python*
-chcon -R --ref /opt/rh/python33/root/usr/lib/python3.3/ Environment/lib
-
 
 
 chcon -t httpd_sys_content_t -R Environment
+chcon --ref /usr/bin/python  Environment/bin/python*
+chcon -R --ref /opt/rh/python33/root/usr/lib/python3.3/ Environment/li*/python3.3/
+
 
 
 
@@ -68,6 +68,27 @@ PWD=`dirname $0`
 scl enable python33 "bash -c 'source $PWD/bin/activate; $PWD/testfcgi.py'"
 ---
 -rwxrwxr-x. apache git unconfined_u:object_r:httpd_sys_content_t:s0 /srv/spindel.devel.takeit.se/test/Foobar.launcher
+---
+testfcgi.py ser ut:
+#!/usr/bin/env python
+import sys
+ 
+from paste.deploy import loadapp
+from flup.server.fcgi_fork import WSGIServer
+ 
+app = loadapp('config:/srv/spindel.devel.takeit.se/testapp/fcgi.ini')
+server = WSGIServer(app)
+server.run()
+----
+-rwxrwxr-x. spider git unconfined_u:object_r:httpd_sys_content_t:s0 testfcgi.py
+
+
+
+---
+Med SQLite så måste Apache ha grupp-skriv till katalogen:
+sudo chgrp apache projekt
+sudo chgrp apache projekt/*.sqlite
+chcon -t httpd_sys_rw_content_t projekt/*sqlite
 
 
 
