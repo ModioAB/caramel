@@ -54,7 +54,7 @@ Genereras med audit2allow
 --
 Konfig för HTTPD (apache 2.2 )
 	Alias / /srv/spindel.devel.takeit.se/test/Foobar.launcher
-	<Directory /srv/spindel.devel.takeit.se/test/>
+	<Directory /srv/spindel.devel.takeit.se/test>
 		 SetHandler fcgid-script
 		 Options +ExecCGI
 		 Order allow,deny
