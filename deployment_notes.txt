@@ -1,0 +1,73 @@
+Driftsättning på RHEL 6 (testa)
+
+
+installera apache mod_fcgid
+
+installera scl ( Software Collections Library ) python33
+
+scl enable python33 bash
+virtualenv-3.3  /srv/project/Environment
+
+
+
+chcon --ref /usr/bin/python  Environment/bin/python*
+chcon -R --ref /opt/rh/python33/root/usr/lib/python3.3/ Environment/lib
+
+
+
+chcon -t httpd_sys_content_t -R Environment
+
+
+
+SELinux context inuti Virtualenv skall vara:
+
+drwxrwxr-x. spider git  unconfined_u:object_r:var_t:s0   bin
+-rwxrwxr-x. spider git system_u:object_r:bin_t:s0        bin/python3
+drwxrwxr-x. spider git  system_u:object_r:lib_t:s0       lib
+-rw-rw-r--. spider git unconfined_u:object_r:httpd_sys_content_t:s0 bin/activate
+-rw-rw-r--. spider git unconfined_u:object_r:httpd_sys_content_t:s0 bin/activate_this.py
+drwxrwxr-x. spider git system_u:object_r:lib_t:s0       lib/python3.3/
+-rw-rw-r--. spider git system_u:object_r:lib_t:s0       lib/python3.3/site.py
+
+
+
+
+
+
+SELinux modul som tillåter setpgid behövs:
+[root@devel test]# cat setpgid.te 
+
+module setpgid 1.0;
+
+require {
+	type httpd_sys_script_t;
+	class process setpgid;
+}
+
+#============= httpd_sys_script_t ==============
+allow httpd_sys_script_t self:process setpgid;
+
+
+Genereras med audit2allow
+
+
+--
+Konfig för HTTPD (apache 2.2 )
+	Alias / /srv/spindel.devel.takeit.se/test/Foobar.launcher
+	<Directory /srv/spindel.devel.takeit.se/test/>
+		 SetHandler fcgid-script
+		 Options +ExecCGI
+		 Order allow,deny
+		Allow from all
+	</Directory>
+----
+
+cat /srv/spindel.devel.takeit.se/test/Foobar.launcher
+#!/bin/bash
+PWD=`dirname $0`
+scl enable python33 "bash -c 'source $PWD/bin/activate; $PWD/testfcgi.py'"
+---
+-rwxrwxr-x. apache git unconfined_u:object_r:httpd_sys_content_t:s0 /srv/spindel.devel.takeit.se/test/Foobar.launcher
+
+
+
