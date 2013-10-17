@@ -16,7 +16,7 @@ import transaction
 
 from pyramid import testing
 
-from .models import DBSession
+from .models import init_session, DBSession
 
 
 class TestMyView(unittest.TestCase):
@@ -24,15 +24,11 @@ class TestMyView(unittest.TestCase):
         self.config = testing.setUp()
         from sqlalchemy import create_engine
         engine = create_engine("sqlite://")
-        from .models import (
-            Base,
-            MyModel,
-            )
-        DBSession.configure(bind=engine)
-        Base.metadata.create_all(engine)
+        init_session(engine, create=True)
+        from .models import MyModel
         with transaction.manager:
             model = MyModel(name="one", value=55)
-            DBSession.add(model)
+            model.save()
 
     def tearDown(self):
         DBSession.remove()

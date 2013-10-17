@@ -24,7 +24,6 @@ from hashlib import sha256
 from datetime import datetime
 
 from .models import (
-    DBSession,
     CSR,
     AccessLog,
     )
@@ -73,7 +72,7 @@ def csr_add(request):
         raise HTTPBadRequest
     # XXX: store things in DB
     try:
-        DBSession.add(csr)
+        csr.save()
     except IntegrityError:
         raise HTTPBadRequest    # XXX: is this what we want here?
     # We've accepted the signing request, but there's been no signing yet
@@ -86,11 +85,11 @@ def cert_fetch(request):
     # XXX: JSON-renderer at the moment, to dump
     sha256sum = request.matchdict["sha256"]
     try:
-        csr = DBSession.query(CSR).filter_by(sha256sum=sha256sum).one()
+        csr = CSR.by_sha256sum(sha256sum)
     except NoResultFound:
         raise HTTPNotFound
     # XXX: Exceptions? remote_addr or client_addr?
-    DBSession.add(AccessLog(csr, request.remote_addr))
+    AccessLog(csr, request.remote_addr).save()
     if csr.certificates:
         cert = csr.certificates[0]
         if datetime.utcnow() < cert.not_after:

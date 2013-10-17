@@ -23,9 +23,8 @@ from pyramid.paster import (
     )
 
 from ..models import (
-    DBSession,
+    init_session,
     CSR,
-    Base,
     )
 
 
@@ -43,8 +42,7 @@ def main(argv=sys.argv):
     setup_logging(config_uri)
     settings = get_appsettings(config_uri)
     engine = engine_from_config(settings, 'sqlalchemy.')
-    DBSession.configure(bind=engine)
-    Base.metadata.create_all(engine)
+    init_session(engine, create=True)
     # with transaction.manager:
     #     model = CSR(...)
-    #     DBSession.add(model)
+    #     model.save()
