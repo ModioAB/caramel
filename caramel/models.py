@@ -39,6 +39,7 @@ class Base(object):
 
     def save(self):
         DBSession.add(self)
+        DBSession.flush()
 
     @classmethod
     def query(cls):
