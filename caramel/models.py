@@ -104,13 +104,13 @@ class CSR(Base):
         return dict(sha256=self.sha256sum, url=url)
 
     def __str__(self):
-        return (b"<{0.__class__.__name__} " # auto-concatenation (no comma)
-                b"sha256sum={0.sha256sum:8.8}... "
-                b"OU={0.orgunit!r} CN={0.commonname!r}>").format(self)
+        return ("<{0.__class__.__name__} " # auto-concatenation (no comma)
+                "sha256sum={0.sha256sum:8.8}... "
+                "OU={0.orgunit!r} CN={0.commonname!r}>").format(self)
 
     def __repr__(self):
-        return (b"<{0.__class__.__name__} id={0.id} " # (no comma)
-                b"sha256sum={0.sha256sum}>").format(self)
+        return ("<{0.__class__.__name__} id={0.id} " # (no comma)
+                "sha256sum={0.sha256sum}>").format(self)
 
 class AccessLog(Base):
     # XXX: name could be better
@@ -125,11 +125,11 @@ class AccessLog(Base):
         self.addr = addr
 
     def __str__(self):
-        return (b"<{0.__class__.__name__} id={0.id} "
-                b"csr={0.csr.sha256sum} when={0.when}>").format(self)
+        return ("<{0.__class__.__name__} id={0.id} "
+                "csr={0.csr.sha256sum} when={0.when}>").format(self)
 
     def __repr__(self):
-        return b"<{0.__class__.__name__} id={0.id}>".format(self)
+        return "<{0.__class__.__name__} id={0.id}>".format(self)
 
 class Certificate(Base):
     pem = _sa.Column(_sa.Text, nullable=False)
@@ -143,4 +143,4 @@ class Certificate(Base):
         return
 
     def __repr__(self):
-        return b"<{0.__class__.__name__} id={0.id}>".format(self)
+        return "<{0.__class__.__name__} id={0.id}>".format(self)

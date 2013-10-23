@@ -34,8 +34,8 @@ from sqlalchemy.orm.exc import NoResultFound
 _MAXLEN = 2 * 2**10             # should be enough for up to 4kb keys
 ## FIXME: figure out how we should compare client DN to CA DN
 # Fixed prefix for certs created by us
-_CA_PREFIX = ((b"C", b"SE"), (b"ST", b"Ostergotland"), (b"L", b"Linkoping"),
-              (b"O", b"Mymodio AB"))
+_CA_PREFIX = (("C", "SE"), ("ST", "Ostergotland"), ("L", "Linkoping"),
+              ("O", "Mymodio AB"))
 
 
 def raise_for_length(req, limit=_MAXLEN):
