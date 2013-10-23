@@ -11,39 +11,54 @@ del unicode_literals, print_function, absolute_import, division
 # ----- End header -----
 #
 
-from sqlalchemy import (
-    Column,
-    Integer,
-    Text,
-    CHAR,
-    String,
-    DateTime,
-    ForeignKey,
+import sqlalchemy as _sa
+from sqlalchemy.ext.declarative import (
+    declarative_base as _declarative_base,
+    declared_attr as _declared_attr,
     )
+import sqlalchemy.orm as _orm
+from zope.sqlalchemy import ZopeTransactionExtension as _ZTE
 
-from sqlalchemy.ext.declarative import declarative_base
-
-from sqlalchemy.orm import (
-    scoped_session,
-    sessionmaker,
-    relationship,
-    backref,
-    )
-
-from zope.sqlalchemy import ZopeTransactionExtension
-
-from OpenSSL import crypto
-from pyramid.decorator import reify
-
-import datetime
+import OpenSSL.crypto as _crypto
+from pyramid.decorator import reify as _reify
+import datetime as _datetime
 
 # XXX: probably error prone for cases where things are specified by string
-def foreignkeycol(referent, *args, **kwargs):
+def _fkcolumn(referent, *args, **kwargs):
     refcol = referent.property.columns[0]
-    return Column(refcol.type, ForeignKey(referent), *args, **kwargs)
+    return _sa.Column(refcol.type, _sa.ForeignKey(referent), *args, **kwargs)
 
-DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
-Base = declarative_base()
+DBSession = _orm.scoped_session(_orm.sessionmaker(extension=_ZTE()))
+
+class Base(object):
+    @_declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
+
+    id = _sa.Column(_sa.Integer, primary_key=True)
+
+    def save(self):
+        DBSession.add(self)
+        DBSession.flush()
+
+    @classmethod
+    def query(cls):
+        return DBSession.query(cls)
+
+    @classmethod
+    def all(cls):
+        return cls.query().all()
+
+# XXX: Newer versions of sqlalchemy have a decorator variant 'as_declarative'
+Base = _declarative_base(cls=Base)
+
+# XXX: not the best of names
+def init_session(engine, create=False):
+    DBSession.configure(bind=engine)
+    if create:
+        Base.metadata.create_all(engine)
+    else:
+        Base.metadata.bind = engine
 
 # Upper bounds from RFC 5280
 _UB_CN_LEN = 64
@@ -53,17 +68,14 @@ _UB_OU_LEN = 64
 _SHA256_LEN = 64
 
 class CSR(Base):
-    __tablename__ = "requests"
-
-    id = Column(Integer, primary_key=True)
-    sha256sum = Column(CHAR(_SHA256_LEN), unique=True, nullable=False)
-    pem = Column(Text, nullable=False)
-    orgunit = Column(String(_UB_OU_LEN))
-    commonname = Column(String(_UB_CN_LEN))
-    accessed = relationship("AccessLog", backref="csr",
-                            order_by="AccessLog.when.desc()")
-    certificates = relationship("Certificate", backref="csr",
-                                order_by="Certificate.not_after.desc()")
+    sha256sum = _sa.Column(_sa.CHAR(_SHA256_LEN), unique=True, nullable=False)
+    pem = _sa.Column(_sa.Text, nullable=False)
+    orgunit = _sa.Column(_sa.String(_UB_OU_LEN))
+    commonname = _sa.Column(_sa.String(_UB_CN_LEN))
+    accessed = _orm.relationship("AccessLog", backref="csr",
+                                 order_by="AccessLog.when.desc()")
+    certificates = _orm.relationship("Certificate", backref="csr",
+                                     order_by="Certificate.not_after.desc()")
 
     def __init__(self, sha256sum, reqtext):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
@@ -73,15 +85,19 @@ class CSR(Base):
         self.orgunit = self.subject.OU
         self.commonname = self.subject.CN
 
-    @reify
+    @_reify
     def req(self):
-        req = crypto.load_certificate_request(crypto.FILETYPE_PEM, self.pem)
+        req = _crypto.load_certificate_request(_crypto.FILETYPE_PEM, self.pem)
         # XXX: req.verify(req.get_pubkey()) ?
         return req
 
-    @reify
+    @_reify
     def subject(self):
         return self.req.get_subject()
+
+    @classmethod
+    def by_sha256sum(cls, sha256sum):
+        return cls.query().filter_by(sha256sum=sha256sum).one()
 
     def __json__(self, request):
         url = request.route_url("cert", sha256=self.sha256sum)
@@ -97,15 +113,12 @@ class CSR(Base):
                 b"sha256sum={0.sha256sum}>").format(self)
 
 class AccessLog(Base):
-    __tablename__ = "accesslog"
-
-    id = Column(Integer, primary_key=True)
     # XXX: name could be better
-    when = Column(DateTime, default=datetime.datetime.utcnow)
+    when = _sa.Column(_sa.DateTime, default=_datetime.datetime.utcnow)
     # XXX: name could be better, could perhaps be limited length,
     #      might not want this nullable
-    addr = Column(Text)
-    csr_id = foreignkeycol(CSR.id, nullable=False)
+    addr = _sa.Column(_sa.Text)
+    csr_id = _fkcolumn(CSR.id, nullable=False)
 
     def __init__(self, csr, addr):
         self.csr = csr
@@ -119,14 +132,11 @@ class AccessLog(Base):
         return b"<{0.__class__.__name__} id={0.id}>".format(self)
 
 class Certificate(Base):
-    __tablename__ = "certificates"
-
-    id = Column(Integer, primary_key=True)
-    pem = Column(Text, nullable=False)
+    pem = _sa.Column(_sa.Text, nullable=False)
     # XXX: not_after might be enough
-    not_before = Column(DateTime, nullable=False)
-    not_after = Column(DateTime, nullable=False)
-    csr_id = foreignkeycol(CSR.id, nullable=False)
+    not_before = _sa.Column(_sa.DateTime, nullable=False)
+    not_after = _sa.Column(_sa.DateTime, nullable=False)
+    csr_id = _fkcolumn(CSR.id, nullable=False)
 
     def __init__(self, *args, **kws):
         # TODO: stuff

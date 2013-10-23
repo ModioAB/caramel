@@ -7,3 +7,4 @@
 .*.swp
 *.sqlite
 .coverage*
+__pycache__

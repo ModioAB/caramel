@@ -14,7 +14,12 @@ requires = [
 #   "pyramid_debugtoolbar",
     "zope.sqlalchemy",
     "waitress",
-    "pyOpenSSL"
+    "pyOpenSSL",
+    "flup>=1.0.3.dev",
+    ]
+
+deplinks = [
+    "http://hg.saddi.com/flup-py3.0/archive/cc23b715b120.tar.gz#egg=flup-1.0.3.dev",
     ]
 
 setup(name="caramel",
@@ -36,6 +41,7 @@ setup(name="caramel",
       zip_safe=False,
       test_suite="caramel",
       install_requires=requires,
+      dependency_links=deplinks,
       entry_points="""\
       [paste.app_factory]
       main = caramel:main
