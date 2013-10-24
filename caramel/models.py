@@ -93,7 +93,9 @@ class CSR(Base):
 
     @_reify
     def subject(self):
-        return self.req.get_subject()
+        compontents = self.req.get_subject().get_components()
+        return tuple((n.decode("utf8"), v.decode("utf8"))
+                     for n, v in compontents)
 
     @classmethod
     def by_sha256sum(cls, sha256sum):

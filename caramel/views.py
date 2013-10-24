@@ -52,8 +52,8 @@ def raise_for_length(req, limit=_MAXLEN):
 
 def acceptable_subject(subject, required_prefix=_CA_PREFIX):
     # XXX: figure out how to do this properly. this is somewhat ugly.
-    return all(x == y for x, y in zip(subject.get_components(),
-                                      required_prefix))
+    return (len(subject) >= len(required_prefix) and
+            all(x == y for x, y in zip(subject, required_prefix)))
 
 
 @view_config(route_name="csr", request_method="POST", renderer="json")
