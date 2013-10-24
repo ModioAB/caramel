@@ -18,4 +18,4 @@ cfg="$(readlink -e "${cfg_path}")" || die not found: "${cfg_path}"
     die "${venv}" does not appear to be a virtualenv
 
 scl enable python33 "bash -c \
-'source \"${venv}/bin/activate\"; ${here}/fcgi-launcher.py \"${cfg}\"'"
+'source \"${venv}/bin/activate\"; ${here}/paste-launcher.py \"${cfg}\"'"
