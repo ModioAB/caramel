@@ -65,7 +65,7 @@ def csr_add(request):
         raise HTTPBadRequest("hash mismatch ({0})".format(sha256sum))
     try:
         csr = CSR(sha256sum, request.body)
-    except crypto.Error as err:
+    except ValueError as err:
         raise HTTPBadRequest("crypto error: {0}".format(err))
     # XXX: figure out what to verify in subject, and how
     if not acceptable_subject(csr.subject_components):

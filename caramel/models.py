@@ -81,7 +81,10 @@ class CSR(Base):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
         self.sha256sum = sha256sum
         self.pem = reqtext
-        self.req.verify(self.req.get_pubkey())
+        try:
+            self.req.verify(self.req.get_pubkey())
+        except _crypto.Error as err:
+            raise ValueError(err)
         self.orgunit = self.subject.OU
         self.commonname = self.subject.CN
 
