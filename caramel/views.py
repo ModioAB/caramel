@@ -50,10 +50,10 @@ def raise_for_length(req, limit=_MAXLEN):
                 "Max size: {0} kB".fromat(limit / 2**10)
                 )
 
-def acceptable_subject(subject, required_prefix=_CA_PREFIX):
+def acceptable_subject(components, required_prefix=_CA_PREFIX):
     # XXX: figure out how to do this properly. this is somewhat ugly.
-    return (len(subject) >= len(required_prefix) and
-            all(x == y for x, y in zip(subject, required_prefix)))
+    return (len(components) >= len(required_prefix) and
+            all(x == y for x, y in zip(components, required_prefix)))
 
 
 @view_config(route_name="csr", request_method="POST", renderer="json")
@@ -68,8 +68,8 @@ def csr_add(request):
     except crypto.Error as err:
         raise HTTPBadRequest("crypto error: {0}".format(err))
     # XXX: figure out what to verify in subject, and how
-    if not acceptable_subject(csr.subject):
-        raise HTTPBadRequest("bad subject: {0}".format(csr.subject))
+    if not acceptable_subject(csr.subject_components):
+        raise HTTPBadRequest("bad subject: {0}".format(csr.subject_components))
     # XXX: store things in DB
     try:
         csr.save()

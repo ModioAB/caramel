@@ -93,7 +93,11 @@ class CSR(Base):
 
     @_reify
     def subject(self):
-        compontents = self.req.get_subject().get_components()
+        return self.req.get_subject()
+
+    @_reify
+    def subject_components(self):
+        compontents = self.req._subject.get_components()
         return tuple((n.decode("utf8"), v.decode("utf8"))
                      for n, v in compontents)
 
