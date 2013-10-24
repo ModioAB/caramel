@@ -84,7 +84,7 @@ class CSR(Base):
         try:
             self.req.verify(self.req.get_pubkey())
         except _crypto.Error as err:
-            raise ValueError(err)
+            raise ValueError("invalid PEM reqtext")
         self.orgunit = self.subject.OU
         self.commonname = self.subject.CN
 
