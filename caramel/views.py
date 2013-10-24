@@ -62,19 +62,20 @@ def csr_add(request):
     raise_for_length(request)
     sha256sum = sha256(request.body).hexdigest()
     if sha256sum != request.matchdict["sha256"]:
-        raise HTTPBadRequest
+        raise HTTPBadRequest("hash mismatch ({0})".format(sha256sum))
     try:
         csr = CSR(sha256sum, request.body)
-    except crypto.Error:
-        raise HTTPBadRequest
+    except crypto.Error as err:
+        raise HTTPBadRequest("crypto error: {0}".format(err))
     # XXX: figure out what to verify in subject, and how
     if not acceptable_subject(csr.subject):
-        raise HTTPBadRequest
+        raise HTTPBadRequest("bad subject: {0}".format(csr.subject))
     # XXX: store things in DB
     try:
         csr.save()
     except IntegrityError:
-        raise HTTPBadRequest    # XXX: is this what we want here?
+        # XXX: is this what we want here?
+        raise HTTPBadRequest("duplicate request")
     # We've accepted the signing request, but there's been no signing yet
     request.response.status_int = 202
     # JSON-rendered data (client could calculate this itself, and often will)
