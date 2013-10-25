@@ -34,8 +34,8 @@ from sqlalchemy.orm.exc import NoResultFound
 _MAXLEN = 2 * 2**10             # should be enough for up to 4kb keys
 ## FIXME: figure out how we should compare client DN to CA DN
 # Fixed prefix for certs created by us
-_CA_PREFIX = ((b"C", b"SE"), (b"ST", b"Ostergotland"), (b"L", b"Linkoping"),
-              (b"O", b"Mymodio AB"))
+_CA_PREFIX = (("C", "SE"), ("ST", "Ostergotland"), ("L", "Linkoping"),
+              ("O", "Mymodio AB"))
 
 
 def raise_for_length(req, limit=_MAXLEN):
@@ -50,10 +50,10 @@ def raise_for_length(req, limit=_MAXLEN):
                 "Max size: {0} kB".fromat(limit / 2**10)
                 )
 
-def acceptable_subject(subject, required_prefix=_CA_PREFIX):
+def acceptable_subject(components, required_prefix=_CA_PREFIX):
     # XXX: figure out how to do this properly. this is somewhat ugly.
-    return all(x == y for x, y in zip(subject.get_components(),
-                                      required_prefix))
+    return (len(components) >= len(required_prefix) and
+            all(x == y for x, y in zip(components, required_prefix)))
 
 
 @view_config(route_name="csr", request_method="POST", renderer="json")
@@ -62,19 +62,20 @@ def csr_add(request):
     raise_for_length(request)
     sha256sum = sha256(request.body).hexdigest()
     if sha256sum != request.matchdict["sha256"]:
-        raise HTTPBadRequest
+        raise HTTPBadRequest("hash mismatch ({0})".format(sha256sum))
     try:
         csr = CSR(sha256sum, request.body)
-    except crypto.Error:
-        raise HTTPBadRequest
+    except ValueError as err:
+        raise HTTPBadRequest("crypto error: {0}".format(err))
     # XXX: figure out what to verify in subject, and how
-    if not acceptable_subject(csr.subject):
-        raise HTTPBadRequest
+    if not acceptable_subject(csr.subject_components):
+        raise HTTPBadRequest("bad subject: {0}".format(csr.subject_components))
     # XXX: store things in DB
     try:
         csr.save()
     except IntegrityError:
-        raise HTTPBadRequest    # XXX: is this what we want here?
+        # XXX: is this what we want here?
+        raise HTTPBadRequest("duplicate request")
     # We've accepted the signing request, but there's been no signing yet
     request.response.status_int = 202
     # JSON-rendered data (client could calculate this itself, and often will)
