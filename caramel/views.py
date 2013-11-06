@@ -47,7 +47,7 @@ def raise_for_length(req, limit=_MAXLEN):
         raise HTTPLengthRequired
     if length > limit:
         raise HTTPRequestEntityTooLarge(
-                "Max size: {0} kB".fromat(limit / 2**10)
+                "Max size: {0} kB".format(limit / 2**10)
                 )
 
 def acceptable_subject(components, required_prefix=_CA_PREFIX):
