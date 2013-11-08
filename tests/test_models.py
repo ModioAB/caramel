@@ -14,7 +14,6 @@ del unicode_literals, print_function, absolute_import, division
 from caramel.models import CSR
 from . import fixtures, ModelTestCase
 
-import unittest
 from operator import attrgetter
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
@@ -47,13 +46,10 @@ class TestCSR(ModelTestCase):
         with self.assertRaises(ValueError):
             fixtures.CSRData.truncated().save()
 
-    # XXX: nose has no support for expectedFailure, so skip()-ing instead
-    @unittest.skip("Expected to fail, see issue #14.")
     def test_trailing_content(self):
         with self.assertRaises(ValueError):
             fixtures.CSRData.trailing_content().save()
 
-    @unittest.skip("Expected to fail, see issue #14.")
     def test_multi_request(self):
         with self.assertRaises(ValueError):
             fixtures.CSRData.multi_request().save()

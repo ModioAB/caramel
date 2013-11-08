@@ -83,7 +83,11 @@ class CSR(Base):
         self.pem = reqtext
         try:
             self.req.verify(self.req.get_pubkey())
-        except _crypto.Error as err:
+        except _crypto.Error:
+            raise ValueError("invalid PEM reqtext")
+        # Check for and reject reqtext with trailing content
+        pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, self.req)
+        if pem != self.pem:
             raise ValueError("invalid PEM reqtext")
         self.orgunit = self.subject.OU
         self.commonname = self.subject.CN
