@@ -186,11 +186,59 @@ class CSRData(object):
         ),
         )
 
-    bad_pem = CSRFixture(      # `good` with the subject of `initial`
+    bad_signature = CSRFixture(  # `good` with the subject of `initial`
         pem=dedent("""\
             -----BEGIN CERTIFICATE REQUEST-----
             MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
             YW1wbGUgRGVwdDEYMBYGA1UEAwwPZm9vLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
+            AQEBBQADSwAwSAJBAKk2sD6xi/gfO3TVnoGMhUmkPDD17/qYzEvDdw/kponLTdNF
+            asGx1//giKSBqBpUFt+KTz3NofK9Pf2qWWDxyUECAwEAAaAAMA0GCSqGSIb3DQEB
+            BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
+            faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
+            -----END CERTIFICATE REQUEST-----
+            """).encode("utf8"),
+        )
+
+    truncated = CSRFixture(
+        pem=dedent("""\
+            -----BEGIN CERTIFICATE REQUEST-----
+            MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
+            YW1wbGUgRGVwdDEYMBYGA1UEAwwPYmFyLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
+            AQEBBQADSwAwSAJBAKk2sD6xi/gfO3TVnoGMhUmkPDD17/qYzEvDdw/kponLTdNF
+            asGx1//giKSBqBpUFt+KTz3NofK9Pf2qWWDxyUECAwEAAaAAMA0GCSqGSIb3DQEB
+            """).encode("utf8"),
+        )
+
+    trailing_content = CSRFixture(
+        pem=dedent("""\
+            -----BEGIN CERTIFICATE REQUEST-----
+            MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
+            YW1wbGUgRGVwdDEYMBYGA1UEAwwPYmFyLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
+            AQEBBQADSwAwSAJBAKk2sD6xi/gfO3TVnoGMhUmkPDD17/qYzEvDdw/kponLTdNF
+            asGx1//giKSBqBpUFt+KTz3NofK9Pf2qWWDxyUECAwEAAaAAMA0GCSqGSIb3DQEB
+            BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
+            faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
+            -----END CERTIFICATE REQUEST-----
+            foo
+            bar
+            baz
+            quux
+            """).encode("utf8"),
+        )
+
+    multi_request = CSRFixture(
+        pem=dedent("""\
+            -----BEGIN CERTIFICATE REQUEST-----
+            MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
+            YW1wbGUgRGVwdDEYMBYGA1UEAwwPZm9vLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
+            AQEBBQADSwAwSAJBANBBe43zbCwPs1jRPPqgb6Otdqx9kg67Dgfoxh3Mly7b9JPp
+            orKIs6zzoyMeLHLJYk+CwSHyeS1hc4zL+3A+k88CAwEAAaAAMA0GCSqGSIb3DQEB
+            BQUAA0EALt6dIjlzG05KCfyiy2PJdAwcjC+mpHh3i4cJs50U+EnxBgX8QscOu382
+            72uukmhYBG1Xd1LN4S5RL9pcQ9KLaA==
+            -----END CERTIFICATE REQUEST-----
+            -----BEGIN CERTIFICATE REQUEST-----
+            MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
+            YW1wbGUgRGVwdDEYMBYGA1UEAwwPYmFyLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
             AQEBBQADSwAwSAJBAKk2sD6xi/gfO3TVnoGMhUmkPDD17/qYzEvDdw/kponLTdNF
             asGx1//giKSBqBpUFt+KTz3NofK9Pf2qWWDxyUECAwEAAaAAMA0GCSqGSIb3DQEB
             BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
