@@ -7,7 +7,7 @@ MY_KEY=/etc/pki/tls/private/client.example.com.key
 CLIENTID=`cat /etc/machine-id`   # For example
 CLIENTID=`sed -e 's/://g' /sys/class/net/eth0/address`
 
-SUBJECT="/C=SE/ST=Ostergotland/L=Linkoping/O=ExampleInc/OU=ExampleCom/CN=$CLIENTID"
+SUBJECT="/O=ExampleInc/OU=ExampleCom/CN=$CLIENTID"
 POST_URL=https://caramel.example.com/ra
 
 echo $SUBJECT
