@@ -16,16 +16,17 @@ import transaction
 
 from pyramid import testing
 
-from .models import init_session, DBSession
+from caramel.models import init_session, DBSession
 
 
+@unittest.skip("Example test case from scaffold, barely altered.")
 class TestMyView(unittest.TestCase):
     def setUp(self):
         self.config = testing.setUp()
         from sqlalchemy import create_engine
         engine = create_engine("sqlite://")
         init_session(engine, create=True)
-        from .models import MyModel
+        from caramel.models import MyModel
         with transaction.manager:
             model = MyModel(name="one", value=55)
             model.save()
@@ -35,7 +36,7 @@ class TestMyView(unittest.TestCase):
         testing.tearDown()
 
     def test_it(self):
-        from .views import my_view
+        from caramel.views import my_view
         request = testing.DummyRequest()
         info = my_view(request)
         self.assertEqual(info["one"].name, "one")
