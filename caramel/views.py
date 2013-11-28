@@ -47,8 +47,9 @@ def raise_for_length(req, limit=_MAXLEN):
         raise HTTPLengthRequired
     if length > limit:
         raise HTTPRequestEntityTooLarge(
-                "Max size: {0} kB".format(limit / 2**10)
-                )
+            "Max size: {0} kB".format(limit / 2**10)
+            )
+
 
 def acceptable_subject(components, required_prefix=_CA_PREFIX):
     # XXX: figure out how to do this properly. this is somewhat ugly.
@@ -80,6 +81,7 @@ def csr_add(request):
     request.response.status_int = 202
     # JSON-rendered data (client could calculate this itself, and often will)
     return csr
+
 
 @view_config(route_name="cert", request_method="GET", renderer="json")
 def cert_fetch(request):

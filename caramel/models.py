@@ -23,12 +23,14 @@ import OpenSSL.crypto as _crypto
 from pyramid.decorator import reify as _reify
 import datetime as _datetime
 
+
 # XXX: probably error prone for cases where things are specified by string
 def _fkcolumn(referent, *args, **kwargs):
     refcol = referent.property.columns[0]
     return _sa.Column(refcol.type, _sa.ForeignKey(referent), *args, **kwargs)
 
 DBSession = _orm.scoped_session(_orm.sessionmaker(extension=_ZTE()))
+
 
 class Base(object):
     @_declared_attr
@@ -52,6 +54,7 @@ class Base(object):
 # XXX: Newer versions of sqlalchemy have a decorator variant 'as_declarative'
 Base = _declarative_base(cls=Base)
 
+
 # XXX: not the best of names
 def init_session(engine, create=False):
     DBSession.configure(bind=engine)
@@ -66,6 +69,7 @@ _UB_OU_LEN = 64
 
 # Length of hex digest of a sha256 checksum
 _SHA256_LEN = 64
+
 
 class CSR(Base):
     sha256sum = _sa.Column(_sa.CHAR(_SHA256_LEN), unique=True, nullable=False)
@@ -117,13 +121,14 @@ class CSR(Base):
         return dict(sha256=self.sha256sum, url=url)
 
     def __str__(self):
-        return ("<{0.__class__.__name__} " # auto-concatenation (no comma)
+        return ("<{0.__class__.__name__} "  # auto-concatenation (no comma)
                 "sha256sum={0.sha256sum:8.8}... "
                 "OU={0.orgunit!r} CN={0.commonname!r}>").format(self)
 
     def __repr__(self):
-        return ("<{0.__class__.__name__} id={0.id} " # (no comma)
+        return ("<{0.__class__.__name__} id={0.id} "  # (no comma)
                 "sha256sum={0.sha256sum}>").format(self)
+
 
 class AccessLog(Base):
     # XXX: name could be better
@@ -143,6 +148,7 @@ class AccessLog(Base):
 
     def __repr__(self):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
+
 
 class Certificate(Base):
     pem = _sa.Column(_sa.Text, nullable=False)

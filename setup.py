@@ -11,7 +11,7 @@ requires = [
     "SQLAlchemy",
     "transaction",
     "pyramid_tm",
-#   "pyramid_debugtoolbar",
+    # "pyramid_debugtoolbar",
     "zope.sqlalchemy",
     "waitress",
     "pyOpenSSL",
@@ -19,7 +19,8 @@ requires = [
     ]
 
 deplinks = [
-    "http://hg.saddi.com/flup-py3.0/archive/cc23b715b120.tar.gz#egg=flup-1.0.3.dev",
+    "http://hg.saddi.com/flup-py3.0/archive/cc23b715b120.tar.gz" +
+    "#egg=flup-1.0.3.dev",
     ]
 
 setup(name="caramel",
@@ -27,11 +28,11 @@ setup(name="caramel",
       description="caramel",
       long_description=README + "\n\n" + CHANGES,
       classifiers=[
-        "Programming Language :: Python",
-        "Framework :: Pyramid",
-        "Topic :: Internet :: WWW/HTTP",
-        "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
-        ],
+          "Programming Language :: Python",
+          "Framework :: Pyramid",
+          "Topic :: Internet :: WWW/HTTP",
+          "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+          ],
       author="",
       author_email="",
       url="",

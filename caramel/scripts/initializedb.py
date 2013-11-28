@@ -13,7 +13,6 @@ del unicode_literals, print_function, absolute_import, division
 
 import os
 import sys
-import transaction
 
 from sqlalchemy import engine_from_config
 
@@ -22,10 +21,7 @@ from pyramid.paster import (
     setup_logging,
     )
 
-from ..models import (
-    init_session,
-    CSR,
-    )
+from ..models import init_session
 
 
 def usage(argv):
@@ -43,6 +39,3 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri)
     engine = engine_from_config(settings, 'sqlalchemy.')
     init_session(engine, create=True)
-    # with transaction.manager:
-    #     model = CSR(...)
-    #     model.save()
