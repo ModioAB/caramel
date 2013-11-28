@@ -1,0 +1,136 @@
+#! /bin/bash -u
+#
+# TODO: Legal.
+# TODO: documentation about what this is for, reqs, how to config,
+#       how to deploy (ln -s ../../path/to/this .git/hooks/pre-commit);
+#       perhaps some more about where bits come from.
+# XXX: Probably want _some_ output while setting up test environment,
+#      but easy_install, pip install and setup.py install/test/develop
+#      are all way to verbose, even with --quiet.
+
+flake8="$(git config hooks.flake8 || which flake8 2>/dev/null)"
+virtualenv="$(git config hooks.virtualenv || which virtualenv 2>/dev/null)"
+
+FLAKE8_ERROR="Could not find flake8.
+XXX: spiel about git config hooks.flake8 goes here.
+"
+
+VIRTUALENV_ERROR="Could not find virtualenv.
+XXX: spiel about git config hooks.virtualenv goes here.
+"
+
+die () {
+    [ -n "${1-}" ] && echo "Error: $1"
+    exit ${2:-1}
+} >&2
+
+debug () {
+    echo >&2 "$@"
+}
+
+# on_exit / add_on_exit code inspired by:
+# http://www.linuxjournal.com/content/use-bash-trap-statement-cleanup-temporary-files
+declare -a on_exit_items
+
+quoteargs () {
+    local i str='' singlequote="'\''"
+    for i; do
+        str="$str '${i//\'/$singlequote}'"
+    done
+    printf %s "${str# }"
+}
+
+function on_exit()
+{
+    for i in "${on_exit_items[@]}"
+    do
+        eval "$i"
+    done
+}
+
+function add_on_exit()
+{
+    local n=${#on_exit_items[*]}
+    on_exit_items[$n]="$(quoteargs "$@")"
+    if [[ $n -eq 0 ]]; then
+        trap on_exit EXIT
+    fi
+}
+
+### Flake8 checks
+# Flake8 (pep8, rather) has a --diff option, but it seems to be flawed
+# (did not detect bad indentation, at least). We'll check both HEAD and
+# index, and diff the results of those.
+# XXX: renames are at the moment treated as all-new material.
+flake8_diff () {
+    # flake8_diff a b
+    # a and b assumed to be directories
+    [ -z "${flake8}" ] && {
+        # XXX: better way to do this?
+        (die "${FLAKE8_ERROR}")
+        return $?
+    }
+
+    local a="${1%%/}" b="${2%%/}"
+    # use cut to trim the directory names (len+2 to get past the slash).
+    ! fgrep -xv -f <($flake8 "${a}" | cut -c "$((${#a}+2))-") \
+        <($flake8 "${b}" | cut -c "$((${#b}+2))-")
+}
+
+### Python testing
+# "python setup.py test" is much to verbose about thing not really
+# relevant. asd
+unittest_discover () {
+    ### unittest_discover scratch_dir project_dir
+    # initialize virtualenv, easy_install project,
+    # run "python -m unittest discover" on project with venv python.
+    [ -z "$virtualenv" ] && {
+        # XXX: better way to do this?
+        (die "${VIRTUALENV_ERROR}")
+        return $?
+    }
+
+    local scratch="${1%%/}" proj="${2%%/}"
+    local venv="${scratch}/venv" log="${scratch}/log"
+    debug "Initialize virtualenv"
+    $virtualenv "$venv" > /dev/null || {
+        (die "Failed to create virtualenv.")
+        return $?
+    }
+    debug "Install project (will probably take some time)"
+    "${venv}/bin/easy_install" -Z "${proj}" &> "$log" || {
+        cat "$log"
+        (die "Test installation failed.")
+        return $?
+    }
+    "${venv}/bin/python" -m unittest discover -v "$proj"
+}
+
+if git rev-parse --verify HEAD &>/dev/null
+then
+    against=HEAD
+else
+    # Initial commit: diff against an empty tree object
+    against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+fi
+
+exec 1>&2
+
+tmpdir="$(mktemp -d --tmpdir)" || die "Failed to create tempdir?!"
+add_on_exit rm -rf "$tmpdir"
+
+mkdir "${tmpdir}/old" "${tmpdir}/new"
+git checkout-index -q -a --prefix="${tmpdir}/new/"
+git archive $against | tar -C "${tmpdir}/old" -x -f -
+
+flake8_diff "${tmpdir}/old" "${tmpdir}/new"
+FLAKE8_STATUS=$?
+
+unittest_discover "$tmpdir" "${tmpdir}/new"
+TEST_STATUS=$?
+
+# "git diff --check" is not very clear without color, so force color=auto.
+git diff-index --check --cached --color=auto $against
+
+[ $? -eq 0 -a $FLAKE8_STATUS -eq 0 -a $TEST_STATUS -eq 0 ] ||
+    die "You've got some issues to deal with."
