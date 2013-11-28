@@ -113,3 +113,47 @@ Running Tests with Nose
 - $venv/bin/pip install nose
 
 - nosetests
+
+
+Installing the Commit Hook
+--------------------------
+
+We use commit-hooks to run test-cases in a clean virtualenv before each commit.
+This is to ensure a certain level of quality and code standards, and to prevent
+missing dependencies in setup.py. Running these tests at each commit can be
+expensive as it involves going to the network and downloading every package
+from scratch. This is not a concern for our development environment, but may be
+a problem for others.
+
+
+Install the hooks with the following commands:
+
+- cd <directory containing this file>
+
+- ln -rs pre-commit-checks .git/hooks/pre-commit
+
+Please note the "-r" flag to ln, as it makes sure the relative link keeps the
+correct path.
+
+For the pre-commit hook to work, you need to have flake8 available. Either
+install flake8 via:
+
+- pip install flake8
+
+Or point git config hooks.flake8 to the flake8 executable:
+
+- git config hooks.flake8 /path/to/flake8
+
+
+Making sure you have VirtualEnv
+-------------------------------
+
+To use the commit hook you need virtualenv available.
+If you do not have virtualenv in your path, please point to it with:
+
+- git config hooks.virtualenv /path/to/virtualenv
+
+In order to run the python3 interpreter instead of the normal python2
+interpreter, you should configure the hook as this:
+
+- git config hooks.virtualenv /usr/bin/virtualenv -p /usr/bin/python3
