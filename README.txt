@@ -3,6 +3,7 @@ Caramel README
 
 What is Caramel?
 ----------------
+
 Caramel is a certificate management system that makes it easy to use
 client certificates in web applications, mobile applications, embedded use
 and other places. It solves the certificate signing and certificate
@@ -15,6 +16,7 @@ certificate authority and manage and maintain keys and signing periods.
 
 How does Caramel work?
 ----------------------
+
 Caramel is a REST-ful web application that accepts certificate signing
 requests (CSR) from anyone, stores this, and possibly returns a signed
 certificate.
@@ -36,6 +38,7 @@ non-public machine.
 
 What should I take special care about?
 --------------------------------------
+
 *No* identity validation is performed by the application, this is left as
 an exercise for the reader.
 
@@ -47,9 +50,10 @@ time out and become "stale", thus preventing future connections.
 
 Example usage
 -------------
+
 We install the administration interface and database on an internal
 machine (intranet) and put the public application on our software update
-service.  We use the unique identifier for each client (its machine-ID or
+service. We use the unique identifier for each client (its machine-ID or
 mac-address) as the identifier, and manually match these when initially
 signing requests.
 
@@ -69,6 +73,7 @@ included. The example includes:
 
 Security trade-offs
 -------------------
+
 We have made a conscious decision to have signing keys living
 (unencrypted, for now) on the administration server. This is a usability
 trade-off in order to make it possible to smoothly use signing keys.
