@@ -25,7 +25,10 @@ day = timedelta(days=1)
 year = 365 * day                # close enough
 now = datetime.now()
 
-from caramel import models
+from caramel import (
+    models,
+    views,
+    )
 
 
 class defaultproperty(object):
@@ -112,6 +115,10 @@ class AccessLogFixture(AttributeCollection, SimilarityComparable):
         access = models.AccessLog(csr, self.addr)
         access.when = self.when
         return access
+
+
+# "Correct" subject prefix for test data
+subject_prefix = (('O', 'Example inc.'), ('OU', 'Example Dept'),)
 
 
 class CertificateData(object):
@@ -226,6 +233,23 @@ class CSRData(object):
             """).encode("utf8"),
         )
 
+    leading_content = CSRFixture(
+        pem=dedent("""\
+            foo
+            bar
+            baz
+            quux
+            -----BEGIN CERTIFICATE REQUEST-----
+            MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
+            YW1wbGUgRGVwdDEYMBYGA1UEAwwPYmFyLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
+            AQEBBQADSwAwSAJBAKk2sD6xi/gfO3TVnoGMhUmkPDD17/qYzEvDdw/kponLTdNF
+            asGx1//giKSBqBpUFt+KTz3NofK9Pf2qWWDxyUECAwEAAaAAMA0GCSqGSIb3DQEB
+            BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
+            faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
+            -----END CERTIFICATE REQUEST-----
+            """).encode("utf8"),
+        )
+
     multi_request = CSRFixture(
         pem=dedent("""\
             -----BEGIN CERTIFICATE REQUEST-----
@@ -260,4 +284,32 @@ class CSRData(object):
             Spam, Spam, Spam, Spam, Spam, Spam, Baked Beans,
                 Spam, Spam, Spam and Spam
             """).encode("utf8"),
+        )
+
+    empty = CSRFixture(pem=b"")
+
+    bad_sha = CSRFixture(good, sha256sum=not_pem.sha256sum)
+
+    bad_subject = CSRFixture(
+        orgunit="Example test dept.",
+        commonname="baz.example.com",
+        pem=dedent("""\
+            -----BEGIN CERTIFICATE REQUEST-----
+            MIIBCDCBswIBADBOMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xGzAZBgNVBAsMEkV4
+            YW1wbGUgdGVzdCBkZXB0LjEYMBYGA1UEAwwPYmF6LmV4YW1wbGUuY29tMFwwDQYJ
+            KoZIhvcNAQEBBQADSwAwSAJBAOQ+LeU8pbEg5/XeD+HLnGah4A96qDL4HtNsTW0N
+            //DbwGchtE8h9LSs3ePXWDVHak87Jx8A+wq7DRUd/LDVP6cCAwEAAaAAMA0GCSqG
+            SIb3DQEBBQUAA0EAhriivXQYFbdc8QrnDjwVCX8ZGXiGKQEC66LceWDdvOy+mDu8
+            gi+L6IgnptU8VmEowAPp0veIH1MWJrnGdp7M0g==
+            -----END CERTIFICATE REQUEST-----
+        """).encode("utf-8"),
+        subject_components=(
+            ("O", "Example inc."),
+            ("OU", "Example test dept."),
+            ("CN", "baz.example.com"),
+        ),
+        )
+
+    large_body = CSRFixture(
+        pem="".join(("foobar", "x" * views._MAXLEN)).encode("utf-8"),
         )
