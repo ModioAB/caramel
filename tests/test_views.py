@@ -77,7 +77,6 @@ class TestCSRAdd(ModelTestCase):
         with self.assertRaises(HTTPRequestEntityTooLarge):
             views.csr_add(req)
 
-    @unittest.skip("issue #15")
     def test_empty(self):
         req = dummypost(fixtures.CSRData.empty)
         with self.assertRaises(HTTPBadRequest):

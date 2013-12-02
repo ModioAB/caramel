@@ -31,7 +31,12 @@ from .models import (
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
-_MAXLEN = 2 * 2**10             # should be enough for up to 4kb keys
+# Maximum length allowed for csr uploads.
+# 2 kbyte should be enough for up to 4 kbit keys.
+# XXX: This should probably be handled outside of app (i.e. by the
+#      server), or at least be configurable.
+_MAXLEN = 2 * 2**10
+
 ## FIXME: figure out how we should compare client DN to CA DN
 # Fixed prefix for certs created by us
 _CA_PREFIX = (("C", "SE"), ("ST", "Ostergotland"), ("L", "Linkoping"),
@@ -41,9 +46,8 @@ _CA_PREFIX = (("C", "SE"), ("ST", "Ostergotland"), ("L", "Linkoping"),
 def raise_for_length(req, limit=_MAXLEN):
     # two possible error cases: no length specified, or length exceeds limit
     # raise appropriate exception if either applies
-    # XXX: do this better somehow.
     length = req.content_length
-    if not length:
+    if length is None:
         raise HTTPLengthRequired
     if length > limit:
         raise HTTPRequestEntityTooLarge(
