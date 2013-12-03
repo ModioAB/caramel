@@ -31,6 +31,8 @@ class ModelTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super(ModelTestCase, cls).setUpClass()
+        # Clear existing session, if any.
+        DBSession.remove()
         from sqlalchemy import create_engine
         engine = create_engine("sqlite://")
         init_session(engine, create=True)
