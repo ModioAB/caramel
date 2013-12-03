@@ -57,3 +57,7 @@ class TestCSR(ModelTestCase):
     def test_not_pem(self):
         with self.assertRaises(ValueError):
             fixtures.CSRData.not_pem().save()
+
+    def test_empty(self):
+        with self.assertRaises(ValueError):
+            fixtures.CSRData.empty().save()
