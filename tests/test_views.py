@@ -14,8 +14,10 @@ del unicode_literals, print_function, absolute_import, division
 import unittest
 import functools                # XXX: mocking subject validation
 import transaction
+import datetime
 
 from pyramid import testing
+from pyramid.response import Response
 from pyramid.httpexceptions import (
     HTTPLengthRequired,
     HTTPRequestEntityTooLarge,
@@ -25,7 +27,12 @@ from pyramid.httpexceptions import (
 
 from . import fixtures, ModelTestCase
 
-from caramel.models import init_session, DBSession
+from caramel.models import (
+    init_session,
+    DBSession,
+    CSR,
+    AccessLog,
+    )
 from caramel import views
 
 
@@ -116,6 +123,71 @@ class TestCSRAdd(ModelTestCase):
         req = dummypost(fixtures.CSRData.bad_subject)
         with self.assertRaises(HTTPBadRequest):
             views.csr_add(req)
+
+
+class TestCertFetch(ModelTestCase):
+    def setUp(self):
+        super(TestCertFetch, self).setUp()
+        self.config = testing.setUp()
+        self.req = testing.DummyRequest()
+        self.req.remote_addr = "test"
+        # TODO: ...
+
+    def tearDown(self):
+        super(TestCertFetch, self).tearDown()
+        testing.tearDown()
+        # TODO: ...
+
+    def test_missing(self):
+        self.req.matchdict["sha256"] = fixtures.CSRData.good.sha256sum
+        accesses = len(AccessLog.all())
+        with self.assertRaises(HTTPNotFound):
+            views.cert_fetch(self.req)
+        self.assertEqual(accesses, len(AccessLog.all()))
+
+    def test_exists_valid(self):
+        sha256sum = fixtures.CSRData.initial.sha256sum
+        csr = CSR.by_sha256sum(sha256sum)
+        now = datetime.datetime.utcnow()
+        self.req.matchdict["sha256"] = sha256sum
+        resp = views.cert_fetch(self.req)
+        # Verify response contents
+        self.assertIsInstance(resp, Response)
+        self.assertEqual(resp.body, csr.certificates[0].pem)
+        self.assertEqual(self.req.response.status_int, 200)
+        # Verify there's a new AccessLog entry
+        self.assertEqual(csr.accessed[0].addr, self.req.remote_addr)
+        self.assertAlmostEqual(csr.accessed[0].when, now,
+                               delta=datetime.timedelta(seconds=1))
+
+    def test_exists_expired(self):
+        csr = fixtures.CSRData.with_expired_cert()
+        csr.save()
+        now = datetime.datetime.utcnow()
+        self.req.matchdict["sha256"] = csr.sha256sum
+        resp = views.cert_fetch(self.req)
+        # Verify response contents
+        self.assertIs(resp, csr)
+        self.assertEqual(self.req.response.status_int, 202)
+        # Verify there's a new AccessLog entry
+        self.assertEqual(csr.accessed[0].addr, self.req.remote_addr)
+        self.assertAlmostEqual(csr.accessed[0].when, now,
+                               delta=datetime.timedelta(seconds=1))
+
+    def test_not_signed(self):
+        csr = fixtures.CSRData.good()
+        csr.save()
+        now = datetime.datetime.utcnow()
+        self.req.matchdict["sha256"] = csr.sha256sum
+        resp = views.cert_fetch(self.req)
+        # Verify response contents
+        self.assertIs(resp, csr)
+        self.assertEqual(self.req.response.status_int, 202)
+        # Verify there's a new AccessLog entry
+        self.assertEqual(csr.accessed[0].addr, self.req.remote_addr)
+        self.assertAlmostEqual(csr.accessed[0].when, now,
+                               delta=datetime.timedelta(seconds=1))
+        pass
 
 
 @unittest.skip("Example test case from scaffold, barely altered.")

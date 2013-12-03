@@ -130,6 +130,8 @@ class CertificateData(object):
                    generating certificates.
             """).encode("utf8"),
         )
+
+    expired = CertificateFixture(initial, not_after=now - 1 * day)
     # FIXME: add more certificates here, once we have something to test.
 
 
@@ -170,6 +172,29 @@ class CSRData(object):
         ],
         certificates=[
             CertificateData.initial,
+        ],
+        )
+
+    with_expired_cert = CSRFixture(
+        orgunit="Example Dept",
+        commonname="spam.example.com",
+        pem=dedent("""\
+            -----BEGIN CERTIFICATE REQUEST-----
+            MIIBAzCBrgIBADBJMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
+            YW1wbGUgRGVwdDEZMBcGA1UEAwwQc3BhbS5leGFtcGxlLmNvbTBcMA0GCSqGSIb3
+            DQEBAQUAA0sAMEgCQQDkPi3lPKWxIOf13g/hy5xmoeAPeqgy+B7TbE1tDf/w28Bn
+            IbRPIfS0rN3j11g1R2pPOycfAPsKuw0VHfyw1T+nAgMBAAGgADANBgkqhkiG9w0B
+            AQUFAANBAM/IwsPxOXo2JubjE3evdFsFTHF78epsT5maLP/xqNo3RzG/5oPm1Yas
+            V1gKs+ltL05eBvQEpWtVNFzDPIt7X9M=
+            -----END CERTIFICATE REQUEST-----
+            """).encode("utf8"),  # py3 dedent can't handle bytes
+        subject_components=(
+            ('O', 'Example inc.'),
+            ('OU', 'Example Dept'),
+            ('CN', 'spam.example.com'),
+        ),
+        certificates=[
+            CertificateData.expired,
         ],
         )
 
