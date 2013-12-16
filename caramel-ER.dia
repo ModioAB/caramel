@@ -509,7 +509,7 @@
         <dia:boolean val="false"/>
       </dia:attribute>
       <dia:attribute name="derived">
-        <dia:boolean val="false"/>
+        <dia:boolean val="true"/>
       </dia:attribute>
       <dia:attribute name="multivalued">
         <dia:boolean val="false"/>
