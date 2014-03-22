@@ -1,0 +1,10 @@
+Some sources of interest.
+
+x509 style guide, 2000
+https://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
+
+Fixing X.509 certificates, 2014
+http://tersesystems.com/2014/03/20/fixing-x509-certificates/
+
+RFC 5280, Internet X.509 Public Key Infrastructure Certificate 2008
+http://tools.ietf.org/search/rfc5280#section-4.1
