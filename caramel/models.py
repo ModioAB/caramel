@@ -156,6 +156,8 @@ class Certificate(Base):
     not_before = _sa.Column(_sa.DateTime, nullable=False)
     not_after = _sa.Column(_sa.DateTime, nullable=False)
     csr_id = _fkcolumn(CSR.id, nullable=False)
+    client = _sa.Column(_sa.Boolean)    # Add Client extensions
+    server = _sa.Column(_sa.Boolean)    # Add Server extensions
 
     def __init__(self, *args, **kws):
         # TODO: stuff

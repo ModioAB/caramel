@@ -1,0 +1,65 @@
+Other CA systems
+=============
+OpenCA
+Dogtag (redhat Cert server)
+
+
+Some sources of interest
+========================
+
+
+Fixing X.509 certificates, 2014
+===============================
+http://tersesystems.com/2014/03/20/fixing-x509-certificates/
+
+
+
+x509 style guide, 2000
+======================
+https://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
+
+
+RFC 5280, Internet X.509 Public Key Infrastructure Certificate 2008
+===================================================================
+http://tools.ietf.org/search/rfc5280#section-4.1
+
+Certificate Transparency code on parsing ASN.1 x509 with python
+https://code.google.com/p/certificate-transparency/source/browse/src/python/ct/crypto/#crypto%2Fasn1
+
+
+
+
+Puppet style CA requests
+========================
+Interesting because of how they use custom OIDs
+http://docs.puppetlabs.com/puppet/latest/reference/ssl_attributes_extensions.html
+
+
+Random sources
+==============
+http://www.mad-hacking.net/documentation/linux/security/ssl-tls/creating-csr.xml
+
+
+ASN.1
+=====
+PyASN.1 Documentation
+http://pyasn1.sourceforge.net/
+
+http://www.openssl.org/docs/apps/asn1parse.html
+
+
+RedHat Certificate System, Aka DogTag
+=====================================
+https://access.redhat.com/site/documentation/en-US/Red_Hat_Certificate_System/8.0/html/Admin_Guide/CRL_Extensions.html
+https://access.redhat.com/site/documentation/en-US/Red_Hat_Certificate_System/8.0/html/Admin_Guide/Standard_X.509_v3_Certificate_Extensions.html
+
+
+
+Unsorted stuff
+==============
+http://techglimpse.com/sha256-hash-certificate-openssl/
+http://www.openssl.org/docs/apps/ca.html
+http://gnutls.org/manual/gnutls.html#X_002e509-certificates
+https://help.ubuntu.com/community/GnuTLS
+
+http://www.mad-hacking.net/documentation/linux/security/ssl-tls/creating-csr.xml
