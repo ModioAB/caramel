@@ -19,7 +19,7 @@ SUBJECT_MATCH = {"C": u"SE",
                  "OU": u"Caramel"}
 ATTRIBS_TO_KEEP = tuple(SUBJECT_MATCH.keys()) + ('CN', )
 
-CA_YEARS = 5
+CA_YEARS = 20
 CLIENT_MONTHS = 2
 
 CA_EXTENSIONS = [
@@ -129,7 +129,7 @@ def create_ca_req():
     return key, req
 
 
-def sign_req(req, cacert, cakey, Type="client"):
+def sign_req(req, cacert, cakey, Type="client", serial=0):
     if Type not in ("client", "server", "CA", "client-server"):
         raise ValueError("Mismatched type.")
 
@@ -142,6 +142,8 @@ def sign_req(req, cacert, cakey, Type="client"):
 
     cert = _crypto.X509()
     subject = cert.get_subject()
+    cert.set_serial_number(serial)
+    cert.set_version(VERSION)
     for attrib in ATTRIBS_TO_KEEP:
         if request_subject.get(attrib):
             setattr(subject, attrib, request_subject[attrib])
