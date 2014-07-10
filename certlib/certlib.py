@@ -21,6 +21,8 @@ ATTRIBS_TO_KEEP = tuple(SUBJECT_MATCH.keys()) + ('CN', )
 
 CA_YEARS = 20
 CLIENT_MONTHS = 2
+SERVER_MONTHS = 0
+SERVER_YEARS = 3
 
 CA_EXTENSIONS = [
     # Key usage for a CA cert.
@@ -61,6 +63,12 @@ def CA_LIFE():
 def CLIENT_LIFE():
     d = datetime.date.today()
     t = datetime.date(d.year, d.month+CLIENT_MONTHS, d.day)
+    return int((t-d).total_seconds())
+
+
+def SERVER_LIFE():
+    d = datetime.date.today()
+    t = datetime.date(d.year+SERVER_YEARS, d.month+SERVER_MONTHS, d.day)
     return int((t-d).total_seconds())
 
 
@@ -159,8 +167,10 @@ def sign_req(req, cacert, cakey, Type="client", serial=0):
     cert.gmtime_adj_notBefore(0)
     if Type == "CA":
         cert.gmtime_adj_notAfter(CA_LIFE())
-    else:
+    elif Type == "client":
         cert.gmtime_adj_notAfter(CLIENT_LIFE())
+    else:
+        cert.gmtime_adj_notAfter(SERVER_LIFE())
 
     # Extensions for control
     if Type == "client-server":
