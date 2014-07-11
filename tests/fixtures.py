@@ -103,7 +103,7 @@ class CSRFixture(AttributeCollection, SimilarityComparable):
 class CertificateFixture(AttributeCollection, SimilarityComparable):
     def __call__(self, csr):
         # FIXME: adjust when models.Certificate gets a proper __init__
-        cert = models.Certificate()
+        cert = models.Certificate(csr, self.pem)
         for name, value in self._attrs.items():
             setattr(cert, name, value)
         cert.csr = csr
@@ -126,12 +126,67 @@ class CertificateData(object):
         not_before=now - 2 * year,
         not_after=now + 2 * year,
         pem=dedent("""\
-            FIXME: replace with appropriate text, once we've started
-                   generating certificates.
+            -----BEGIN CERTIFICATE-----
+            MIIEVDCCAjygAwIBAgIBZTANBgkqhkiG9w0BAQsFADAmMSQwIgYDVQQDDBtDYXJh
+            bWVsIFNpZ25pbmcgQ2VydGlmaWNhdGUwHhcNMTQwODA4MTM0NDA0WhcNMTQxMDA4
+            MTM0NDA0WjAaMRgwFgYDVQQDDA9mb28uZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3
+            DQEBAQUAA4IBDwAwggEKAoIBAQC+UOYhTExyWQL/mPzxvkd4xzju9Gcoxu5WZxxP
+            +FjvsCKXkdMdzyTGYuaOulsRqyNmc8N73KJa9rlajIxdtR7duBwzX6Ddx2MmOLVL
+            Q95X0jzdYR9iv6NX+bdYnoFUuzFt6N6Tf6OFS7IGiCeYqN7JTzTwlseJ7O4ozdsk
+            vNlw7Cybb5RjqJQ/TRDSDWp1Fuq7FXanM+9Eaok0xqGty1TdMiEsCK8t7w3F1gd3
+            bt48hld7cfe+OqdPxFLLtXv6wVM8EzcFYmwBGx7avXVS8aOsN6Oc3FZBfW0Fi0XD
+            S6YO7WSzsRqciXolv/zPIvc1g6z5RkIPlgUaCtAdNBWkDG0hAgMBAAGjgZgwgZUw
+            DAYDVR0TAQH/BAIwADAWBgNVHSUBAf8EDDAKBggrBgEFBQcDAjAdBgNVHQ4EFgQU
+            79OVse0vdmb3VW6T9P7haHDOrhEwTgYDVR0jBEcwRYAUt9UtYpijdgeh1fObZHE4
+            EBJPROGhKqQoMCYxJDAiBgNVBAMMG0NhcmFtZWwgU2lnbmluZyBDZXJ0aWZpY2F0
+            ZYIBADANBgkqhkiG9w0BAQsFAAOCAgEAN8oppVaZlklLmvD1OfG0jf7SwWa03x6L
+            Ej7xh0EbCeTZXNCmJNjiPpYG57Lf7OlXit9u1aJUQ5VXpUDmv1njb0jnB3EJBWf/
+            Y2KZbRYgXCpMUXxmfLrntULHAn/M3RLNi1ovwisiBqAU5/SZLcRq26Uwb8ygT0K7
+            OA80JqjVzv53nKdUmDR0mopiWiU8c5BTi0R5+Q9vGov+DBcmrgatIHrtiXG8exGK
+            m/DHZMAA93Vv/nh6GUe9uWI4mDhhLRSrdfkHoTPDqrFHIdH4OC+ljlPDRNhpkWAt
+            FIzejEk5pqyqnAW4HHWM13vtOpddnXea+1y6PCX/9InAP5Tl1HMcq7BOgQa+EyPN
+            NdzIRtdRnhtncMJUTCJpm2QEH09aPM3411tFpG3nZ6eTvo5f6oZS+epBVwNVqFXm
+            xTbIEnBFnVBhQh2mXgJJsac2Oy8KGyBnVvGn6FKB6slrBjcIWKg+CDyiXMjwKhk5
+            bjUvUdML4uWoGqdJfl+S+f+8m6S6F276p/uLI8Kb0NaE+z+LFRp2wrrC7DW65R+W
+            eMdFWSu/IZZkoEaTrOeaqmLtQQt/4s66KKNOddftt+uLEMjce7foYQHo+qx9RI/1
+            n4rH2rFn8rcQwSaRyE9NcOpirCur43MR42+LAfZq5s9j7CuQJTw6G0wvCHGqRIQ9
+            X1qbQOxg6ig=
+            -----END CERTIFICATE-----
             """).encode("utf8"),
         )
 
-    expired = CertificateFixture(initial, not_after=now - 1 * day)
+    expired = CertificateFixture(
+        not_before=initial.not_before,
+        not_after=now - 1 * day,
+        pem=dedent("""\
+            -----BEGIN CERTIFICATE-----
+            MIIEVTCCAj2gAwIBAgIBaDANBgkqhkiG9w0BAQsFADAmMSQwIgYDVQQDDBtDYXJh
+            bWVsIFNpZ25pbmcgQ2VydGlmaWNhdGUwHhcNMTQwODA4MTM1OTUxWhcNMTQxMDA4
+            MTM1OTUxWjAbMRkwFwYDVQQDDBBzcGFtLmV4YW1wbGUuY29tMIIBIjANBgkqhkiG
+            9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnrzJ2qNhyIiCZvikFvPr0iEfzf27kTfHN+13
+            7bGuTAzmXFFrajz9K+leYcZR4sCPPRI8QjEUSYcngP1LKUrgzUSldjPrQGLsmx+8
+            gLdi2JN1kPu6uMT97uB1RDKQpIMHGuV4mJKJku3sh6DJvQMjuMv8xOUXHtCw9jjc
+            6CLI9zeEZfM1RXsmRVxLx8HuwlF8ZNRjPGn5lEGIxTORpF1Mef5eTnGIg2kxwj8F
+            5aJP4ei9XS6gbYSFZekruT9Ivh41x4FYmx4bcGQfuIu+cG+XI3xGoNrm/IKMguMQ
+            vwjBj2XnLHzskR5mz9YSLd9vi1nHl7b5u9GDtpmliNOvehaxjQIDAQABo4GYMIGV
+            MAwGA1UdEwEB/wQCMAAwFgYDVR0lAQH/BAwwCgYIKwYBBQUHAwIwHQYDVR0OBBYE
+            FH/tkDyXntmyru3UFyYTO6UTOwjuME4GA1UdIwRHMEWAFLfVLWKYo3YHodXzm2Rx
+            OBAST0ThoSqkKDAmMSQwIgYDVQQDDBtDYXJhbWVsIFNpZ25pbmcgQ2VydGlmaWNh
+            dGWCAQAwDQYJKoZIhvcNAQELBQADggIBAD4r7SEyD6A61ORVjHHpw+5nZuaIf3Xs
+            nZakE5I+wm/ZsVmWO3iOjAKdL2HartlDqGAvX5/w/sEoOkrpr48R7Uolm4ojYD2B
+            Etxb4p9PDHmgT9Sc8nE2hOh8FdIUiGVLRJOuCmZqgk+EBIwB0zJQjREXHVZaN4dS
+            wNNQGz46Vd2b6e4iRCJdgfOd2tuJi/WtvQORJkJ+HeTwLcN9LYY6d1bgups970DP
+            Ve3QzxowNaRdX4SNtTmWs2BqcpYJV/Bx+q5r5CxhuDs5Jyvfmh9K7ux8z8Rv9THm
+            UPJSXahBKLIYI8BYotXB9vpHvgWd15Opa3g+MV1Ego7KDKvdirTKnIcvafAi47vo
+            kpAussllmvGr3wjDrGLlvbyBbbg44MpTzZrWspAjm9t0XFwkDDZGjY9l1zzqolDa
+            KXbDda3LApBjWOr2QxsiwuOcemeekyiYusx5O4NqWJhGRVluvLpo5FWvuGZfoTCG
+            X9QYUVrbsvhMMZR0VQDkJ7zfqbA8HvZ72qRpkC3MkOKDo4Ve9PffRjK+bamZM38I
+            rvKws1E0w1WI1cK8ypefZhF8BiC/KUFMBw3bQAUQqdubv4eN81IX0PjnpfH+7wwA
+            7CRL6mRM5+q4ICfesXzUXpPYjgD2UexIjSJNoYjiu3aKpjwvrZ88t8hPR46Uac7E
+            5yvm61Agw/Tg
+            -----END CERTIFICATE-----
+            """).encode("utf8"),
+        )
     # FIXME: add more certificates here, once we have something to test.
 
 
@@ -153,12 +208,20 @@ class CSRData(object):
         commonname="foo.example.com",
         pem=dedent("""\
             -----BEGIN CERTIFICATE REQUEST-----
-            MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
-            YW1wbGUgRGVwdDEYMBYGA1UEAwwPZm9vLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
-            AQEBBQADSwAwSAJBANBBe43zbCwPs1jRPPqgb6Otdqx9kg67Dgfoxh3Mly7b9JPp
-            orKIs6zzoyMeLHLJYk+CwSHyeS1hc4zL+3A+k88CAwEAAaAAMA0GCSqGSIb3DQEB
-            BQUAA0EALt6dIjlzG05KCfyiy2PJdAwcjC+mpHh3i4cJs50U+EnxBgX8QscOu382
-            72uukmhYBG1Xd1LN4S5RL9pcQ9KLaA==
+            MIICjTCCAXUCAQIwSDEVMBMGA1UECgwMRXhhbXBsZSBpbmMuMRUwEwYDVQQLDAxF
+            eGFtcGxlIERlcHQxGDAWBgNVBAMMD2Zvby5leGFtcGxlLmNvbTCCASIwDQYJKoZI
+            hvcNAQEBBQADggEPADCCAQoCggEBAL5Q5iFMTHJZAv+Y/PG+R3jHOO70ZyjG7lZn
+            HE/4WO+wIpeR0x3PJMZi5o66WxGrI2Zzw3vcolr2uVqMjF21Ht24HDNfoN3HYyY4
+            tUtD3lfSPN1hH2K/o1f5t1iegVS7MW3o3pN/o4VLsgaIJ5io3slPNPCWx4ns7ijN
+            2yS82XDsLJtvlGOolD9NENINanUW6rsVdqcz70RqiTTGoa3LVN0yISwIry3vDcXW
+            B3du3jyGV3tx9746p0/EUsu1e/rBUzwTNwVibAEbHtq9dVLxo6w3o5zcVkF9bQWL
+            RcNLpg7tZLOxGpyJeiW//M8i9zWDrPlGQg+WBRoK0B00FaQMbSECAwEAAaAAMA0G
+            CSqGSIb3DQEBCwUAA4IBAQBxkfl/Nq0y2u8Deq17OlB8WZfJnigEtFtMFstWNxNp
+            Z3yxSFbaOYpB/+S0qOTjFbx1vQd8sSKTEqSgn2MkLhNsqtakWhejC+rrzVA02K6d
+            J7uCylX8XVRJPjmt14E2LNLxGx1adV8St0tPrbzXMzr0ygpGaIITvd+ZzXr4CuGQ
+            vao+T3EooEVQeFmWaoU6URUsqlp1itYzN1O+tvHv9pmCZ5UyTJlHQSc+cKJsUgE4
+            O+jruZshnFL0KQybIokYGLLcb6NixdsCTSw+rfztuLUEEMP1ozNCgk8TX8mXWduM
+            XIP49FHFe6IjLuj0ofRXiJPmS+4ToqRbNIBRoz7kSLov
             -----END CERTIFICATE REQUEST-----
             """).encode("utf8"),  # py3 dedent can't handle bytes
         subject_components=(
@@ -180,12 +243,20 @@ class CSRData(object):
         commonname="spam.example.com",
         pem=dedent("""\
             -----BEGIN CERTIFICATE REQUEST-----
-            MIIBAzCBrgIBADBJMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
-            YW1wbGUgRGVwdDEZMBcGA1UEAwwQc3BhbS5leGFtcGxlLmNvbTBcMA0GCSqGSIb3
-            DQEBAQUAA0sAMEgCQQDkPi3lPKWxIOf13g/hy5xmoeAPeqgy+B7TbE1tDf/w28Bn
-            IbRPIfS0rN3j11g1R2pPOycfAPsKuw0VHfyw1T+nAgMBAAGgADANBgkqhkiG9w0B
-            AQUFAANBAM/IwsPxOXo2JubjE3evdFsFTHF78epsT5maLP/xqNo3RzG/5oPm1Yas
-            V1gKs+ltL05eBvQEpWtVNFzDPIt7X9M=
+            MIICjjCCAXYCAQIwSTEVMBMGA1UECgwMRXhhbXBsZSBpbmMuMRUwEwYDVQQLDAxF
+            eGFtcGxlIERlcHQxGTAXBgNVBAMMEHNwYW0uZXhhbXBsZS5jb20wggEiMA0GCSqG
+            SIb3DQEBAQUAA4IBDwAwggEKAoIBAQCevMnao2HIiIJm+KQW8+vSIR/N/buRN8c3
+            7Xftsa5MDOZcUWtqPP0r6V5hxlHiwI89EjxCMRRJhyeA/UspSuDNRKV2M+tAYuyb
+            H7yAt2LYk3WQ+7q4xP3u4HVEMpCkgwca5XiYkomS7eyHoMm9AyO4y/zE5Rce0LD2
+            ONzoIsj3N4Rl8zVFeyZFXEvHwe7CUXxk1GM8afmUQYjFM5GkXUx5/l5OcYiDaTHC
+            PwXlok/h6L1dLqBthIVl6Su5P0i+HjXHgVibHhtwZB+4i75wb5cjfEag2ub8goyC
+            4xC/CMGPZecsfOyRHmbP1hIt32+LWceXtvm70YO2maWI0696FrGNAgMBAAGgADAN
+            BgkqhkiG9w0BAQsFAAOCAQEAf5SnEDewYNy4bu1bwga2alawbr+BQpysl/h53/aJ
+            woJakG3E3+jSyAQ6Bu/j+YY+hTMbNX/sOyWMexS6w6HryQ6i/xvFZqhgN5ap/I6M
+            k7V13j1LyxcTtlD773ikWq7F/+H76FgTAoE4oUmNvptej/C5eW5A1N150vMeecY/
+            0nHIV+eXaZTCbg7UKr1xmR3tdu3DNnFC/BfaVv+Ul7s974k4g53ejLCvnCjMGVS3
+            oQN1HuxKCScUJ9Vtr0dnBLGAf62vAqv5yZYhl9Qnt5EJ9OtspWm0e8FwTjNmoA/z
+            qnvUxskzM2ItxVV9oa9YDTid0GbJvF67QJQyVIO0Vz4uwg==
             -----END CERTIFICATE REQUEST-----
             """).encode("utf8"),  # py3 dedent can't handle bytes
         subject_components=(
@@ -203,12 +274,20 @@ class CSRData(object):
         commonname="bar.example.com",
         pem=dedent("""\
             -----BEGIN CERTIFICATE REQUEST-----
-            MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
-            YW1wbGUgRGVwdDEYMBYGA1UEAwwPYmFyLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
-            AQEBBQADSwAwSAJBAKk2sD6xi/gfO3TVnoGMhUmkPDD17/qYzEvDdw/kponLTdNF
-            asGx1//giKSBqBpUFt+KTz3NofK9Pf2qWWDxyUECAwEAAaAAMA0GCSqGSIb3DQEB
-            BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
-            faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
+            MIICjTCCAXUCAQIwSDEVMBMGA1UECgwMRXhhbXBsZSBpbmMuMRUwEwYDVQQLDAxF
+            eGFtcGxlIERlcHQxGDAWBgNVBAMMD2Jhci5leGFtcGxlLmNvbTCCASIwDQYJKoZI
+            hvcNAQEBBQADggEPADCCAQoCggEBAN7fng4vFo0P0+K1L64rADgXBDrwsa39p3tV
+            7GwY/LZ9crxUgwFKfVLM8rX4KAySiOXix8JF44jansXTOkcm8OjnOKVNIJX/5Pf3
+            bRDSXcjodFIhPVzUynj8E5Z8rEB2ES9gwYDKIYVNnJa2nGmQVe7IgA5O7lNM6gse
+            TqYlN3bmB9Dy/dY+ZVyts1p6aSOYMdAcJ7ojCco9HuYFav2hd7k2h4b4lCKvi7p2
+            sx6DoKmnblmlvMlP9UdSq7wORkAUnMn5rlzdj5LnWsSB+JLBrQaSlsIfVeL0+5oB
+            6zrZI5hJPQiaLcet0v6a7M7UkOyJKiGJVCKYnO122D4Cu4lB2d0CAwEAAaAAMA0G
+            CSqGSIb3DQEBCwUAA4IBAQAGJwl7vUlDg2L3KgnsNA9A4rMKfFn5fzdf6Z0X3HSY
+            Zvi8XKkVAKd7aRUSg6jcJbOm0HNmBR+5SWzXUU62KQWuUCwz+dCyCbcEO/frG0IB
+            HdOs/L4AJgHlIaxwisCLh5VQpj5w0ahhzVfLGWcCK1nbqjUTLcEFhvZviUPUugAD
+            f7QdWNDBuZTrwXGTLsnhC5XQfsk0maXcNji79ziK4sMm5TU2599JmuWL2NTbqaCQ
+            MN1FxWzEy4yXgzW8uv+lX6yyTtkfrC7e3LFiAuoUlBeD5GmsVd30Xz5iGnuQv3d0
+            fekjT5Np8XIS2ERJmx4CIjs5VpE1FMNOMoJ35kQpkQaQ
             -----END CERTIFICATE REQUEST-----
             """).encode("utf8"),
         subject_components=(

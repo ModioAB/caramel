@@ -22,6 +22,16 @@ from zope.sqlalchemy import ZopeTransactionExtension as _ZTE
 import OpenSSL.crypto as _crypto
 from pyramid.decorator import reify as _reify
 import datetime as _datetime
+import dateutil.parser
+import uuid
+
+
+X509_V3 = 0x2  # RFC 2459, 4.1.2.1
+
+# Bitlength to Hash Strength lookup table.
+HASH = {1024: "sha1",
+        2048: "sha256",
+        4096: "sha512"}
 
 
 # XXX: probably error prone for cases where things are specified by string
@@ -85,6 +95,7 @@ class CSR(Base):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
         self.sha256sum = sha256sum
         self.pem = reqtext
+        # FIXME: Below 4 lines (try/except) are duped in the req() function.
         try:
             self.req.verify(self.req.get_pubkey())
         except _crypto.Error:
@@ -99,7 +110,10 @@ class CSR(Base):
     @_reify
     def req(self):
         req = _crypto.load_certificate_request(_crypto.FILETYPE_PEM, self.pem)
-        # XXX: req.verify(req.get_pubkey()) ?
+        try:
+            req.verify(req.get_pubkey())
+        except _crypto.Error:
+            raise ValueError("Invalid Request")
         return req
 
     @_reify
@@ -150,18 +164,117 @@ class AccessLog(Base):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
 
 
+class Extension(object):
+    """Convenience class to make validating Extensions a bit easier"""
+    critical = False
+    name = None
+    data = None
+    text = None
+
+    def __init__(self, ext):
+        self.name = ext.get_short_name()
+        self.critical = bool(ext.get_critical())
+        self.data = ext.get_data()
+        self.text = str(ext)
+
+
 class Certificate(Base):
     pem = _sa.Column(_sa.Text, nullable=False)
     # XXX: not_after might be enough
     not_before = _sa.Column(_sa.DateTime, nullable=False)
     not_after = _sa.Column(_sa.DateTime, nullable=False)
     csr_id = _fkcolumn(CSR.id, nullable=False)
-    client = _sa.Column(_sa.Boolean)    # Add Client extensions
-    server = _sa.Column(_sa.Boolean)    # Add Server extensions
 
-    def __init__(self, *args, **kws):
-        # TODO: stuff
-        return
+    def __init__(self, CSR, pem,  *args, **kws):
+        self.pem = pem
+        self.csr_id = CSR.id
+
+        req = CSR.req
+        cert_pkey = self.cert.get_pubkey()
+
+        # We can't compare pubkeys directly, so we just verify the signature.
+        if not req.verify(cert_pkey):
+            raise ValueError("Public key of cert cannot verify request")
+
+        self.not_before = dateutil.parser.parse(self.cert.get_notBefore())
+        self.not_after = dateutil.parser.parse(self.cert.get_notAfter())
+
+    @_reify
+    def cert(self):
+        cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, self.pem)
+
+        extensions = {}
+        for index in range(0, cert.get_extension_count()):
+            ext = cert.get_extension(index)
+            my_ext = Extension(ext)
+            extensions[my_ext.name] = my_ext
+
+        if cert.get_version() != X509_V3:
+            raise ValueError("Not a x509.v3 certificate")
+
+        ext = extensions.get(b'basicConstraints')
+        if not ext:
+            raise ValueError("Missing Basic Constraints")
+
+        if not ext.critical:
+            raise ValueError("Extended Key Usage not critical")
+
+        ext = extensions.get(b'extendedKeyUsage')
+        if not ext:
+            raise ValueError("Missing Extended Key Usage extension")
+        if not ext.critical:
+            raise ValueError("Extended Key Usage not critical")
+        if "TLS Web Client Authentication" in ext.text:
+            pass
+        if "TLS Web Server Authentication" in ext.text:
+            pass
+        return cert
 
     def __repr__(self):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
+
+    @classmethod
+    def sign(cls, CSR, ca_key, ca_cert, lifetime=_datetime.timedelta(30*3)):
+        """Takes a CSR, signs it, generating and returning a Certificate.
+        """
+        notAfter = int(lifetime.total_seconds())
+        # Transform "raw" PEM text to usable objects
+        sign_key = _crypto.load_privatekey(_crypto.FILETYPE_PEM, ca_key)
+        sign_cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, ca_cert)
+        del ca_cert, ca_key
+
+        # TODO: Verify that the data in DB matches csr_add rules in views.py
+
+        cert = _crypto.X509()
+        cert.set_subject(CSR.req.get_subject())
+        cert.set_serial_number(int(uuid.uuid1()))
+        cert.set_issuer(sign_cert.get_subject())
+        cert.set_pubkey(CSR.req.get_pubkey())
+        cert.set_version(X509_V3)
+        cert.gmtime_adj_notBefore(0)
+        cert.gmtime_adj_notAfter(notAfter)
+        extensions = [
+            _crypto.X509Extension(b'basicConstraints',
+                                  critical=True,
+                                  value=b'CA:FALSE'),
+            _crypto.X509Extension(b'extendedKeyUsage',
+                                  critical=True,
+                                  value=b'clientAuth,serverAuth'),
+            _crypto.X509Extension(b"subjectKeyIdentifier",
+                                  critical=False,
+                                  value=b"hash",
+                                  subject=cert)
+        ]
+        cert.add_extensions(extensions)
+        # subjectKeyIdentifier has to be present before adding auth ident
+        extensions = [
+            _crypto.X509Extension(b"authorityKeyIdentifier",
+                                  critical=False,
+                                  value=b"issuer:always,keyid:always",
+                                  issuer=sign_cert)
+        ]
+        cert.add_extensions(extensions)
+        bits = cert.get_pubkey().bits()
+        cert.sign(sign_key, HASH[bits])
+        pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
+        return cls(CSR=CSR, pem=pem)
