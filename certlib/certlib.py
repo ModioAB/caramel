@@ -4,7 +4,7 @@
 import datetime
 import OpenSSL.crypto as _crypto
 
-VERSION = 3
+VERSION = 0x2
 CLIENT_BITS = 2048
 CA_BITS = 4096
 # Bit strength => hash strength. Based on hash strenghts
@@ -12,12 +12,17 @@ HASH = {1024: "sha1",
         2048: "sha256",
         4096: "sha512"}
 
-SUBJECT_MATCH = {"C": u"SE",
-                 "ST": u"Östergötland",
-                 "L": u"Linköping",
-                 "O": u"Modio AB",
-                 "OU": u"Caramel"}
-ATTRIBS_TO_KEEP = tuple(SUBJECT_MATCH.keys()) + ('CN', )
+SUBJECT_MATCH = (("C", u"SE"),
+                 ("ST", u"Östergötland"),
+                 ("L", u"Linköping"),
+                 ("O", u"Modio AB"),
+                 ("OU", u"Caramel"))
+
+SUBJECT_MATCH = (("O", u"Example inc."),
+                 ("OU", u"Example Dept"))
+ #                "CN": "foo.example.com"}
+
+ATTRIBS_TO_KEEP = SUBJECT_MATCH + ('CN', )
 
 CA_YEARS = 20
 CLIENT_MONTHS = 2
@@ -86,9 +91,10 @@ def matching_template(x509, template):
     # build a new dict of all things in subject that match SUBJECT_MATCH.
     # If our intersect is equal to SUBJECT_MATCH, they were all correct.
     # We may still have excess keys.
-    intersect = {k: v for k, v in template.items()
-                 if k in subject and v == subject[k]}
-    if not intersect == template:
+    intersect = [(k, v) for k, v in template
+                 if k in subject and v == subject[k]]
+
+    if not tuple(intersect) == template:
         raise ValueError("Subject either has missing or invalid keys")
 
 
@@ -107,10 +113,12 @@ def create_req(template, key=None):
 
     req.set_pubkey(key)
     subject = req.get_subject()
-    for k, v in SUBJECT_MATCH.items():
+    for k, v in SUBJECT_MATCH:
+        print(k, v)
         setattr(subject, k, v)
 
-    for k, v in template.items():
+    for k, v in template:
+        print(k, v)
         setattr(subject, k, v)
 
     req.sign(key, HASH[key.bits()])
