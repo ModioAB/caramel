@@ -20,7 +20,7 @@ fi
 
 if [ ! -f $MY_CSR ];
 then
-    openssl req -new -key $MY_KEY -out  $MY_CSR -subj  "$SUBJECT"
+    openssl req -new -key $MY_KEY -out  $MY_CSR -utf8 -sha256 -subj  "$SUBJECT"
     ## Upload csr
 fi
 

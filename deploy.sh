@@ -18,6 +18,9 @@ scl enable python33 "bash -c \
  cd \"${HERE}\"; python setup.py install;'"
 
 /sbin/restorecon -vR "$venv"
+echo "Setting permissions"
+chmod -R go+rX "$HERE"
+chmod -R go+rX "$venv"
 
 # Permissions inside Virtual Env
 chcon -t httpd_sys_content_t ${venv}/bin/activate
@@ -29,5 +32,6 @@ rm -f "$PROJECT".ini "$PROJECT"-venv
 ln -s "$HERE"/production.ini "$PROJECT".ini
 ln -s "$venv" "$PROJECT"-venv
 chcon -t httpd_sys_content_t "$PROJECT".ini
+chcon -t httpd_sys_content_rw_t caramel.sqlite
 
 sudo /usr/local/bin/killcaramel
