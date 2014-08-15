@@ -55,5 +55,6 @@ setup(name="caramel",
       [console_scripts]
       initialize_caramel_db = caramel.scripts.initializedb:main
       caramel_sign = caramel.scripts.sign:main
+      caramel_ca = caramel.scripts.generate_ca:main
       """,
       )
