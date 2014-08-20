@@ -37,10 +37,10 @@ from sqlalchemy.orm.exc import NoResultFound
 #      server), or at least be configurable.
 _MAXLEN = 2 * 2**10
 
-## FIXME: figure out how we should compare client DN to CA DN
+# FIXME: figure out how we should compare client DN to CA DN
 # Fixed prefix for certs created by us
-_CA_PREFIX = (("C", "SE"), ("ST", "Ostergotland"), ("L", "Linkoping"),
-              ("O", "Mymodio AB"))
+_CA_PREFIX = (("C", "SE"), ("ST", "Östergötland"), ("L", "Linköping"),
+              ("O", "Modio AB"))
 
 
 def raise_for_length(req, limit=_MAXLEN):

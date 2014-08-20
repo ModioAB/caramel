@@ -150,6 +150,14 @@ Or point git config hooks.flake8 to the flake8 executable:
 - git config hooks.flake8 /path/to/flake8
 
 
+Dependenceis needed from the Operatingsystem
+--------------------------------------------
+
+* libffi-devel (on RHEL/CentOS)
+* openssl, openssl-devel
+* gcc
+
+
 Making sure you have VirtualEnv
 -------------------------------
 

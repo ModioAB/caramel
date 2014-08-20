@@ -14,13 +14,19 @@ requires = [
     # "pyramid_debugtoolbar",
     "zope.sqlalchemy",
     "waitress",
-    "pyOpenSSL",
-    "flup>=1.0.3.dev",
+    "cryptography>=0.5.dev1",
+    "pyOpenSSL>=0.15.dev",
+    "flup<=1.0.4.dev",
+    "python-dateutil",
     ]
 
 deplinks = [
     "http://hg.saddi.com/flup-py3.0/archive/cc23b715b120.tar.gz" +
-    "#egg=flup-1.0.3.dev",
+    "#egg=flup-1.0.4.dev",
+    "https://github.com/pyca/cryptography/tarball/master" +
+    "#egg=cryptography-0.5.dev1",
+    "https://github.com/MyTemp/pyopenssl/tarball/no-more-T61Strings" +
+    "#egg=pyOpenSSL-0.15.dev"
     ]
 
 setup(name="caramel",
@@ -48,5 +54,7 @@ setup(name="caramel",
       main = caramel:main
       [console_scripts]
       initialize_caramel_db = caramel.scripts.initializedb:main
+      caramel_sign = caramel.scripts.sign:main
+      caramel_ca = caramel.scripts.generate_ca:main
       """,
       )

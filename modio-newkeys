@@ -1,14 +1,10 @@
 #! /bin/sh
-CA_CERT=/etc/pki/tls/certs/ca.example.com.crt
-MY_CRT=/etc/pki/tls/certs/client.example.com.crt
-MY_CSR=/etc/pki/tls/certs/client.example.com.csr
-MY_KEY=/etc/pki/tls/private/client.example.com.key
-
-CLIENTID=`cat /etc/machine-id`   # For example
-CLIENTID=`sed -e 's/://g' /sys/class/net/eth0/address`
-
-SUBJECT="/O=ExampleInc/OU=ExampleCom/CN=$CLIENTID"
-POST_URL=https://caramel.example.com/ra
+MY_CRT=temp.crt
+MY_KEY=temp.key
+MY_CSR=temp.csr
+CLIENTID=123test
+SUBJECT="/C=SE/ST=Östergötland/L=Linköping/O=Modio AB/OU=MyTemp/CN=$CLIENTID"
+POST_URL=http://localhost:6543
 
 echo $SUBJECT
 
@@ -20,20 +16,18 @@ fi
 
 if [ ! -f $MY_CSR ];
 then
-    openssl req -new -key $MY_KEY -out  $MY_CSR -utf8 -sha256 -subj  "$SUBJECT"
-    ## Upload csr
+    openssl req -sha256 -utf8 -new -key $MY_KEY -out $MY_CSR -subj "$SUBJECT"
 fi
 
 CSRSUM=$(sha256sum $MY_CSR |cut -f1 -d" ")
 
-CURL_OPTS="--silent --show-error --remote-time --connect-timeout 300 --max-time 600 --cacert $CA_CERT"
+CURL_OPTS="--silent --show-error --remote-time --connect-timeout 300 --max-time 600"
 
 
 # The logic here is fun.
 # If I don't have a cert, we try to download it.
 #   if we get 404 from downloading it, we upload the CSR.
 
-# if we _have_ a cert, we authorize ourselves using it.
 # If we _have_ a cert, we try to download a newer version.
 # if that 404s, we  upload the CSR.
 #   This is so that "older" clients will re-generate their certs
@@ -47,7 +41,6 @@ if [ -f $MY_CRT ];
 then
     # Check if newer ( -z )
     # and use ssl client auth with key+cert
-
     CURL_OPTS="${CURL_OPTS} --key ${MY_KEY} --cert ${MY_CRT} -z ${MY_CRT}"
 fi
 

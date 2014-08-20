@@ -1,0 +1,11 @@
+
+Serial:
+	We need a serial storage (pref. associated with the root cert)
+	serial should be unique to a certificate.  The question is if we should re-use the serial-number for each cert we sign ( reissuing the same cert + sig with new timestamps ) or not.
+	Revocation is always done based on Serial number.
+
+Quoth the RFC:
+   The serial number is an integer assigned by the CA to each
+   certificate.  It MUST be unique for each certificate issued by a
+   given CA (i.e., the issuer name and serial number identify a unique
+   certificate).
