@@ -135,6 +135,9 @@ class CertificateRequest(object):
                 with open(self.crt_file_name, 'wb') as f:
                     f.write(response.content)
                 break
+            else:
+                response.raise_for_status()
+                break
 
     def get_csr_and_hash(self):
         with open(self.csr_file_name, 'rb') as f:
