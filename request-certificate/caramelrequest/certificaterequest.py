@@ -50,7 +50,7 @@ class CertificateRequest(object):
                                      '-subject',
                                      '-noout',
                                      '-in', self.ca_cert_file_name)
-        _, value = output.decode('utf8').strip().split('subject= ', 1)
+        _, value = decode_openssl_utf8(output).strip().split('subject= ', 1)
         prefix, original_cn = value.split('/CN=')
         return '{}/CN={}'.format(prefix, self.client_id)
 
@@ -147,6 +147,11 @@ class CertificateRequest(object):
 
 def printerr(text):
     sys.stderr.write(text + '\n')
+
+
+def decode_openssl_utf8(text):
+    return bytes(ord(x) for x in text.decode('unicode_escape')) \
+        .decode('utf-8')
 
 
 def call_silent(*args):
