@@ -130,7 +130,7 @@ class CSR(Base):
 
     @classmethod
     def valid(cls):
-        return cls.query().filter_by(rejected=False)
+        return cls.query().filter_by(rejected=False).all()
 
     @classmethod
     def by_sha256sum(cls, sha256sum):

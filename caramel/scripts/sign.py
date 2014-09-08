@@ -13,8 +13,10 @@ import datetime
 def cmdline():
     parser = argparse.ArgumentParser()
     parser.add_argument("inifile")
-    parser.add_argument("--id", help="The CSR id sign")
-    parser.add_argument("--reject", help="Mark CSR as rejected")
+    parser.add_argument("--sign", metavar="id",
+                        help="Sign the CSR with this id")
+    parser.add_argument("--reject", metavar="id",
+                        help="Reject the CSR with this id")
     parser.add_argument("--long", help="Generate a long lived cert(1 year)",
                         action="store_true")
     parser.add_argument("--resign", help="Resign all certificates",
@@ -47,7 +49,7 @@ def main():
     engine = create_engine(settings['sqlalchemy.url'])
     models.init_session(engine)
 
-    if not args.id and not args.resign and not args.reject:
+    if not args.sign and not args.resign and not args.reject:
         print_list()
         closer()
         exit()
@@ -62,21 +64,29 @@ def main():
         print("config file needs ca.cert and ca.key properly set")
         exit(1)
 
-    if args.id and args.resign:
-        print("Only resign or id, not both")
+    if args.sign and args.resign:
+        print("Only resign or sign, not both")
+        exit(1)
+
+    if args.reject and args.resign:
+        print("Reject & resign? No. Just no.")
+        exit(1)
+
+    if args.sign and args.reject:
+        print("Sign & Reject at once is a stupid thing")
+        exit(1)
 
     if args.reject:
         with transaction.manager:
-            try:
-                CSR = models.CSR.query().filter_by(id=args.reject).one()
-            except:
+            CSR = models.CSR.query().get(args.reject)
+            if not CSR:
                 print("ID not found")
                 exit(1)
 
             CSR.rejected = True
             CSR.save()
 
-    if args.id:
+    if args.sign:
         now = datetime.datetime.now()
         if args.long:
             future = now + relativedelta(year=1)
@@ -86,9 +96,8 @@ def main():
         del now, future
 
         with transaction.manager:
-            try:
-                CSR = models.CSR.query().filter_by(id=args.id).one()
-            except:
+            CSR = models.CSR.query().get(args.sign)
+            if not CSR:
                 print("ID not found")
                 exit(1)
 
