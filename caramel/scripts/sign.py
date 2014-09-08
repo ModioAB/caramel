@@ -89,9 +89,9 @@ def main():
     if args.sign:
         now = datetime.datetime.now()
         if args.long:
-            future = now + relativedelta(year=1)
+            future = now + relativedelta(years=1)
         else:
-            future = now + relativedelta(month=1)
+            future = now + relativedelta(months=1)
         lifetime = future - now
         del now, future
 
