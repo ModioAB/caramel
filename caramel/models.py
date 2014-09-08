@@ -86,6 +86,7 @@ class CSR(Base):
     pem = _sa.Column(_sa.Text, nullable=False)
     orgunit = _sa.Column(_sa.String(_UB_OU_LEN))
     commonname = _sa.Column(_sa.String(_UB_CN_LEN))
+    rejected = _sa.Column(_sa.Boolean(create_constraint=True))
     accessed = _orm.relationship("AccessLog", backref="csr",
                                  order_by="AccessLog.when.desc()")
     certificates = _orm.relationship("Certificate", backref="csr",
@@ -106,6 +107,7 @@ class CSR(Base):
             raise ValueError("invalid PEM reqtext")
         self.orgunit = self.subject.OU
         self.commonname = self.subject.CN
+        self.rejected = False
 
     @_reify
     def req(self):
@@ -127,6 +129,10 @@ class CSR(Base):
                      for n, v in compontents)
 
     @classmethod
+    def valid(cls):
+        return cls.query().filter_by(rejected=False).all()
+
+    @classmethod
     def by_sha256sum(cls, sha256sum):
         return cls.query().filter_by(sha256sum=sha256sum).one()
 
@@ -137,6 +143,7 @@ class CSR(Base):
     def __str__(self):
         return ("<{0.__class__.__name__} "  # auto-concatenation (no comma)
                 "sha256sum={0.sha256sum:8.8}... "
+                "rejected: {0.rejected!r}"
                 "OU={0.orgunit!r} CN={0.commonname!r}>").format(self)
 
     def __repr__(self):

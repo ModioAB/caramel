@@ -17,6 +17,7 @@ from pyramid.httpexceptions import (
     HTTPRequestEntityTooLarge,
     HTTPBadRequest,
     HTTPNotFound,
+    HTTPForbidden,
     )
 from pyramid.view import view_config
 
@@ -97,6 +98,8 @@ def cert_fetch(request):
         raise HTTPNotFound
     # XXX: Exceptions? remote_addr or client_addr?
     AccessLog(csr, request.remote_addr).save()
+    if csr.rejected:
+        raise HTTPForbidden
     if csr.certificates:
         cert = csr.certificates[0]
         if datetime.utcnow() < cert.not_after:
