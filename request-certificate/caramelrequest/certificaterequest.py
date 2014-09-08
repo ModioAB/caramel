@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import time
+from xml.etree import ElementTree as ET
 
 import requests
 
@@ -136,6 +137,8 @@ class CertificateRequest(object):
                     f.write(response.content)
                 break
             else:
+                logging.error('Request failed: {}'
+                              .format(parse_html(response)))
                 response.raise_for_status()
                 break
 
@@ -147,6 +150,11 @@ class CertificateRequest(object):
 
 def printerr(text):
     sys.stderr.write(text + '\n')
+
+
+def parse_html(response):
+    return ''.join((e.text or '') + (e.tail or '')
+                   for e in ET.fromstring(response.text).iterfind('body//'))
 
 
 def decode_openssl_utf8(text):
