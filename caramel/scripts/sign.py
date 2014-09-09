@@ -64,6 +64,8 @@ def main():
         print("config file needs ca.cert and ca.key properly set")
         exit(1)
 
+    backdate = settings.get('backdate', False)
+
     if args.sign and args.resign:
         print("Only resign or sign, not both")
         exit(1)
@@ -101,7 +103,8 @@ def main():
                 print("ID not found")
                 exit(1)
 
-            cert = models.Certificate.sign(CSR, ca_key, ca_cert, lifetime)
+            cert = models.Certificate.sign(CSR, ca_key, ca_cert, lifetime,
+                                           backdate)
             cert.save()
 
     if args.resign:
@@ -117,5 +120,6 @@ def main():
                     continue
                 last = csr.certificates[0]
                 lifetime = last.not_after - last.not_before
-                cert = models.Certificate.sign(csr, ca_key, ca_cert, lifetime)
+                cert = models.Certificate.sign(csr, ca_key, ca_cert, lifetime,
+                                               backdate)
                 cert.save()

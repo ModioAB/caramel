@@ -241,8 +241,12 @@ class Certificate(Base):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
 
     @classmethod
-    def sign(cls, CSR, ca_key, ca_cert, lifetime=_datetime.timedelta(30*3)):
+    def sign(cls, CSR, ca_key, ca_cert, lifetime=_datetime.timedelta(30*3),
+             backdate=False):
         """Takes a CSR, signs it, generating and returning a Certificate.
+        backdate causes the CA to set "notBefore" of signed certificates to
+        match that of the CA Certificate. This is an ugly workaround for a
+        timekeeping bug in some firmware.
         """
         notAfter = int(lifetime.total_seconds())
         # Transform "raw" PEM text to usable objects
@@ -260,6 +264,12 @@ class Certificate(Base):
         cert.set_version(X509_V3)
         cert.gmtime_adj_notBefore(0)
         cert.gmtime_adj_notAfter(notAfter)
+        if backdate:
+            before = sign_cert.get_notBefore()
+            if before:
+                cert.set_notBefore(before)
+            del before
+
         extensions = [
             _crypto.X509Extension(b'basicConstraints',
                                   critical=True,
