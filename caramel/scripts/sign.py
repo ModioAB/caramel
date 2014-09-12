@@ -126,7 +126,7 @@ def main():
                 backdate = False
                 if lifetime.days > 34:
                     # Ugly hack for timekeeping issues
-                    settings_backdate
+                    backdate = settings_backdate
                 cert = models.Certificate.sign(csr, ca_key, ca_cert, lifetime,
                                                backdate)
                 cert.save()
