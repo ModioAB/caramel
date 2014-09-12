@@ -3,6 +3,7 @@
 import argparse
 
 from pyramid.paster import bootstrap
+from pyramid.settings import asbool
 from sqlalchemy import create_engine
 from dateutil.relativedelta import relativedelta
 import caramel.models as models
@@ -48,7 +49,7 @@ def main():
     settings, closer = env['registry'].settings, env['closer']
     engine = create_engine(settings['sqlalchemy.url'])
     models.init_session(engine)
-
+    settings_backdate = asbool(settings.get('backdate', False))
     if not args.sign and not args.resign and not args.reject:
         print_list()
         closer()
@@ -91,7 +92,7 @@ def main():
         if args.long:
             future = now + relativedelta(years=1)
             # Ugly hack for timekeeping issues
-            backdate = settings.get('backdate', False)
+            backdate = settings_backdate
         else:
             future = now + relativedelta(months=1)
             # Never backdate short lived certs
@@ -125,7 +126,7 @@ def main():
                 backdate = False
                 if lifetime.days > 34:
                     # Ugly hack for timekeeping issues
-                    backdate = settings.get('backdate', False)
+                    settings_backdate
                 cert = models.Certificate.sign(csr, ca_key, ca_cert, lifetime,
                                                backdate)
                 cert.save()
