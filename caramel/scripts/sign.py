@@ -64,8 +64,6 @@ def main():
         print("config file needs ca.cert and ca.key properly set")
         exit(1)
 
-    backdate = settings.get('backdate', False)
-
     if args.sign and args.resign:
         print("Only resign or sign, not both")
         exit(1)
@@ -92,8 +90,12 @@ def main():
         now = datetime.datetime.now()
         if args.long:
             future = now + relativedelta(years=1)
+            # Ugly hack for timekeeping issues
+            backdate = settings.get('backdate', False)
         else:
             future = now + relativedelta(months=1)
+            # Never backdate short lived certs
+            backdate = False
         lifetime = future - now
         del now, future
 
@@ -120,6 +122,10 @@ def main():
                     continue
                 last = csr.certificates[0]
                 lifetime = last.not_after - last.not_before
+                backdate = False
+                if lifetime.days > 34:
+                    # Ugly hack for timekeeping issues
+                    backdate = settings.get('backdate', False)
                 cert = models.Certificate.sign(csr, ca_key, ca_cert, lifetime,
                                                backdate)
                 cert.save()
