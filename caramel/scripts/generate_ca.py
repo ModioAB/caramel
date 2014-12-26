@@ -10,6 +10,7 @@ from pyramid.paster import bootstrap
 
 VERSION = 0x2
 CA_BITS = 4096
+# Subject attribs, in order.
 ATTRIBS_TO_KEEP = ("C", "ST", "L", "O", "OU", "CN")
 CA_YEARS = 24  # Beware of unixtime ;)
 
@@ -202,6 +203,10 @@ def main():
             print("File already exists: {}. Refusing to corrupt.".format(f))
             closer()
             exit()
+        else:
+            dname = os.path.dirname(f)
+            os.makedirs(dname, exist_ok=True)
+
     print("Will write key to {}".format(ca_key))
     print("Will write cert to {}".format(ca_cert))
 
