@@ -270,6 +270,7 @@ class Certificate(Base):
                 cert.set_notBefore(before)
             del before
 
+        subjectAltName = bytes("DNS:" + CSR.commonname, 'utf-8')
         extensions = [
             _crypto.X509Extension(b'basicConstraints',
                                   critical=True,
@@ -277,10 +278,13 @@ class Certificate(Base):
             _crypto.X509Extension(b'extendedKeyUsage',
                                   critical=True,
                                   value=b'clientAuth,serverAuth'),
+            _crypto.X509Extension(b"subjectAltName",
+                                  critical=False,
+                                  value=subjectAltName),
             _crypto.X509Extension(b"subjectKeyIdentifier",
                                   critical=False,
                                   value=b"hash",
-                                  subject=cert)
+                                  subject=cert),
         ]
         cert.add_extensions(extensions)
         # subjectKeyIdentifier has to be present before adding auth ident
