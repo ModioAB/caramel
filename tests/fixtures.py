@@ -187,6 +187,60 @@ class CertificateData(object):
             -----END CERTIFICATE-----
             """).encode("utf8"),
         )
+
+    ca_cert = CertificateFixture(
+        not_before=initial.not_before,
+        not_after=initial.not_after,
+        subject=(('C', 'SE'), ('ST', 'Östergötland'),
+                 ('L', 'Norrköping'), ('O', 'Muppar AB'),
+                 ('OU', 'Muppar Teknik'),
+                 ('CN', 'Caramel Signing Certificate')),
+
+        common_subject=(('C', 'SE'), ('ST', 'Östergötland'),
+                        ('L', 'Norrköping'), ('O', 'Muppar AB')),
+
+        pem=dedent("""\
+            -----BEGIN CERTIFICATE-----
+            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
+            7eLmmg==
+            -----END CERTIFICATE-----
+            """).encode("utf8"),
+        )
     # FIXME: add more certificates here, once we have something to test.
 
 

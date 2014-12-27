@@ -27,6 +27,7 @@ from datetime import datetime
 from .models import (
     CSR,
     AccessLog,
+    get_ca_prefix,
     )
 
 from sqlalchemy.exc import IntegrityError
@@ -38,10 +39,12 @@ from sqlalchemy.orm.exc import NoResultFound
 #      server), or at least be configurable.
 _MAXLEN = 2 * 2**10
 
-# FIXME: figure out how we should compare client DN to CA DN
-# Fixed prefix for certs created by us
-_CA_PREFIX = (("C", "SE"), ("ST", "Östergötland"), ("L", "Linköping"),
-              ("O", "Modio AB"))
+
+# Helper that opens the file.
+def _get_ca_prefix(filename):
+    with open(filename, 'rt') as f:
+        ca_cert = f.read()
+    return get_ca_prefix(ca_cert)
 
 
 def raise_for_length(req, limit=_MAXLEN):
@@ -56,7 +59,7 @@ def raise_for_length(req, limit=_MAXLEN):
             )
 
 
-def acceptable_subject(components, required_prefix=_CA_PREFIX):
+def acceptable_subject(components, required_prefix):
     # XXX: figure out how to do this properly. this is somewhat ugly.
     return (len(components) >= len(required_prefix) and
             all(x == y for x, y in zip(components, required_prefix)))
@@ -64,6 +67,7 @@ def acceptable_subject(components, required_prefix=_CA_PREFIX):
 
 @view_config(route_name="csr", request_method="POST", renderer="json")
 def csr_add(request):
+
     # XXX: do length check in middleware? server?
     raise_for_length(request)
     sha256sum = sha256(request.body).hexdigest()
@@ -73,8 +77,11 @@ def csr_add(request):
         csr = CSR(sha256sum, request.body)
     except ValueError as err:
         raise HTTPBadRequest("crypto error: {0}".format(err))
+
+    CA_PREFIX = _get_ca_prefix(request.registry.settings['ca.cert'])
+
     # XXX: figure out what to verify in subject, and how
-    if not acceptable_subject(csr.subject_components):
+    if not acceptable_subject(csr.subject_components, CA_PREFIX):
         raise HTTPBadRequest("bad subject: {0}".format(csr.subject_components))
     # XXX: store things in DB
     try:
