@@ -92,15 +92,23 @@ class TestGetCAPrefix(unittest.TestCase):
         result = get_ca_prefix(fixtures.CertificateData.initial.pem)
         self.assertEqual((), result)
 
-    def test_valid_returns_from_valid_subject(self):
-        r = get_ca_prefix(fixtures.CertificateData.ca_cert.pem)
-        self.assertEqual(fixtures.CertificateData.ca_cert.common_subject, r)
-
     def test_empty_returns_from_empty_selector(self):
         result = get_ca_prefix(fixtures.CertificateData.ca_cert.pem, ())
         self.assertEqual((), result)
+
+    def test_valid_returns_from_default_subject(self):
+        r = get_ca_prefix(fixtures.CertificateData.ca_cert.pem)
+        self.assertEqual(fixtures.CertificateData.ca_cert.common_subject, r)
 
     def test_only_CN_returns_from_CN_selector(self):
         CN_TUPLE = (('CN', 'Caramel Signing Certificate'),)
         result = get_ca_prefix(fixtures.CertificateData.ca_cert.pem, (b'CN', ))
         self.assertEqual(CN_TUPLE, result)
+
+    def test_only_wanted_returns_from_selector(self):
+        SELECTED = (('ST', 'Östergötland'),
+                    ('L', 'Norrköping'),
+                    ('OU', 'Muppar Teknik'))
+        SELECTOR = (b'ST', b'L', b'OU')
+        result = get_ca_prefix(fixtures.CertificateData.ca_cert.pem, SELECTOR)
+        self.assertEqual(SELECTED, result)
