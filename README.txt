@@ -170,3 +170,18 @@ In order to run the python3 interpreter instead of the normal python2
 interpreter, you should configure the hook as this:
 
 - git config hooks.virtualenv /usr/bin/virtualenv -p /usr/bin/python3
+
+
+Maintaining your certificates
+-----------------------------
+
+In a server environment with several certificates you usually end up
+rotating/refreshing them in a cron job.
+Included is a tool called "caramel-refresh.sh" that will parse a config file,
+and automatically refresh all certificates matching. This requires the original
+CSR and certificate to be in place. See "request-certificate" for a tool to
+generate your own certificates.
+
+caramel-refresh is intended to be run in a cron job on servers (or clients).
+Please make sure you run the job as the correct user, so permissions aren't a
+problem afterwards.
