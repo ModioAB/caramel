@@ -22,16 +22,20 @@ class CertificateRequest(object):
         self.client_id = client_id
         self.key_file_name = client_id + '.key'
         self.csr_file_name = client_id + '.csr'
+        self.crt_temp_file_name = client_id + '.tmp'
         self.crt_file_name = client_id + '.crt'
         self.ca_cert_file_name = server + '.cacert'
 
     def perform(self):
         self.assert_openssl_available()
         self.assert_ca_cert_available()
+        self.assert_ca_cert_verifies()
         subject = self.get_subject()
         self.ensure_valid_key_file()
         self.ensure_valid_csr_file(subject)
         self.request_cert_from_server()
+        self.assert_temp_cert_verifies()
+        self.rename_temp_cert()
 
     def assert_openssl_available(self):
         path = distutils.spawn.find_executable('openssl')
@@ -44,6 +48,30 @@ class CertificateRequest(object):
             logging.info('CA certificate file {} does not exist!'
                          .format(self.ca_cert_file_name))
             raise CertificateRequestException()
+
+    def assert_ca_cert_verifies(self):
+        result = call_silent('openssl', 'verify',
+                             '-CAfile', self.ca_cert_file_name,
+                             self.ca_cert_file_name)
+        if 0 != result:
+            logging.error('CA cert {} is not valid; bailing'
+                          .format(self.ca_cert_file_name))
+            raise CertificateRequestException()
+
+    def assert_temp_cert_verifies(self):
+        result = call_silent('openssl', 'verify',
+                             '-CAfile', self.ca_cert_file_name,
+                             self.crt_temp_file_name)
+        if 0 != result:
+            logging.error('Our new cert {} is not valid; bailing'
+                          .format(self.crt_temp_file_name))
+            raise CertificateRequestException()
+
+    def rename_temp_cert(self):
+        logging.info('Recieved certificate valid; moving it to {}'
+                     .format(self.crt_file_name))
+        os.rename(self.crt_temp_file_name,
+                  self.crt_file_name)
 
     def get_subject(self):
         output = check_output_silent('openssl',
@@ -134,8 +162,8 @@ class CertificateRequest(object):
                 response = session.get(url)
             elif response.status_code == 200:
                 logging.info('Recieved certificate; saving it to {}'
-                             .format(self.crt_file_name))
-                with open(self.crt_file_name, 'wb') as f:
+                             .format(self.crt_temp_file_name))
+                with open(self.crt_temp_file_name, 'wb') as f:
                     f.write(response.content)
                 break
             else:
