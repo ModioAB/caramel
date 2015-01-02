@@ -59,15 +59,33 @@ def raise_for_length(req, limit=_MAXLEN):
             )
 
 
-def acceptable_subject(components, required_prefix):
-    # XXX: figure out how to do this properly. this is somewhat ugly.
-    return (len(components) >= len(required_prefix) and
-            all(x == y for x, y in zip(components, required_prefix)))
+def raise_for_subject(components, required_prefix):
+    if len(components) < len(required_prefix):
+        raise ValueError("Too few subject components")
+    result = [(x, y) for x, y in zip(components, required_prefix) if x != y]
+    if result:
+        given, required = zip(*result)
+        raise ValueError("{0} do not match {1}".format(given, required))
+
+
+# XXX: Is this the right way? Catch-class JSON converter of Exceptions
+@view_config(context=HTTPRequestEntityTooLarge)
+@view_config(context=HTTPLengthRequired)
+@view_config(context=HTTPBadRequest)
+@view_config(context=HTTPForbidden)
+@view_config(context=HTTPNotFound)
+def HTTPErrorToJson(exc, request):
+    exc.json_body = {
+        "message": exc.message,
+        "status": exc.status,
+    }
+    exc.content_type = "application/json"
+    request.response = exc
+    return request.response
 
 
 @view_config(route_name="csr", request_method="POST", renderer="json")
 def csr_add(request):
-
     # XXX: do length check in middleware? server?
     raise_for_length(request)
     sha256sum = sha256(request.body).hexdigest()
@@ -78,11 +96,13 @@ def csr_add(request):
     except ValueError as err:
         raise HTTPBadRequest("crypto error: {0}".format(err))
 
-    CA_PREFIX = _get_ca_prefix(request.registry.settings['ca.cert'])
-
     # XXX: figure out what to verify in subject, and how
-    if not acceptable_subject(csr.subject_components, CA_PREFIX):
-        raise HTTPBadRequest("bad subject: {0}".format(csr.subject_components))
+    CA_PREFIX = _get_ca_prefix(request.registry.settings['ca.cert'])
+    try:
+        raise_for_subject(csr.subject_components, CA_PREFIX)
+    except ValueError as err:
+        raise HTTPBadRequest("Bad subject: {0}".format(err))
+
     # XXX: store things in DB
     try:
         csr.save()
