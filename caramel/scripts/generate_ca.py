@@ -165,7 +165,7 @@ def build_ca(keyname, certname):
 
     subject["ST"] = input("ST [stateOrProvinceName]: ")[:20]
     subject["L"] = input("L [localityName]: ")
-    subject["O"] = input("P [Organization]: ")
+    subject["O"] = input("O [Organization]: ")
     subject["OU"] = input("OU [organizationalUnitName]: ") or "Caramel"
     subject["CN"] = "Caramel Signing Certificate"
     print("CN will be '{}'".format(subject["CN"]))

@@ -46,4 +46,3 @@ Description : The Dogtag Public Key Infrastructure (PKI) Suite is comprised of t
             :
             : After installation of this package, use the 'pkicreate' and 'pkiremove'
             : utilities to respectively create and remove PKI instances.
-
