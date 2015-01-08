@@ -12,7 +12,7 @@ del unicode_literals, print_function, absolute_import, division
 #
 
 import unittest
-import functools                # XXX: mocking subject validation
+import unittest.mock
 import transaction
 import datetime
 
@@ -41,6 +41,7 @@ def dummypost(fix, **args):
     req.body = fix.pem
     req.content_length = len(req.body)
     req.matchdict["sha256"] = fix.sha256sum
+    req.registry.settings['ca.cert'] = 'abc123.crt'
     return req
 
 
@@ -48,20 +49,15 @@ class TestCSRAdd(ModelTestCase):
     def setUp(self):
         super(TestCSRAdd, self).setUp()
         self.config = testing.setUp()
-        # XXX: subject validation subject to change, will probably
-        #      need work here.
-        self._subject_validation = views.acceptable_subject
-        views.acceptable_subject = functools.partial(
-            views.acceptable_subject,
-            required_prefix=fixtures.subject_prefix,
-            )
-        # TODO: ...
+        # Store original
+        self._get_ca_prefix = views.get_ca_prefix
+        views._get_ca_prefix = unittest.mock.Mock()
+        views._get_ca_prefix.return_value = fixtures.subject_prefix
 
     def tearDown(self):
         super(TestCSRAdd, self).tearDown()
         testing.tearDown()
-        views.acceptable_subject = self._subject_validation
-        # TODO: ...
+        views.get_ca_prefix = self._get_ca_prefix
 
     def test_good(self):
         req = dummypost(fixtures.CSRData.good)

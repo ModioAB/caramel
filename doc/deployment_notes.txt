@@ -1,0 +1,98 @@
+Deployment notes
+----------------
+
+These are mostly notes from deploying, also see
+http://pyramid-cookbook.readthedocs.org/en/latest/deployment/
+
+
+Deploying on RHEL 6/ CentOS (to be tested/Verified)
+---------------------------------------------------
+
+Install Apache & mod_fcgid
+Install SCL ( Software Collections Library, https://www.softwarecollections.org/ ) python33
+$ scl enable python33 bash
+$ virtualenv-3.3  /srv/ca.example.com/Environment
+$ chcon -t httpd_sys_content_t -R Environment
+$ chcon --ref /usr/bin/python  Environment/bin/python
+$ chcon -R --ref /opt/rh/python33/root/usr/lib/python3.3/ Environment/li*/python3.3/
+
+
+SELinux context inside the Virtualenv should be:
+------------------------------------------------
+drwxrwxr-x. admin_user git unconfined_u:object_r:var_t:s0   bin
+-rwxrwxr-x. admin_user git system_u:object_r:bin_t:s0        bin/python3
+drwxrwxr-x. admin_user git system_u:object_r:lib_t:s0       lib
+-rw-rw-r--. admin_user git unconfined_u:object_r:httpd_sys_content_t:s0 bin/activate
+-rw-rw-r--. admin_user git unconfined_u:object_r:httpd_sys_content_t:s0 bin/activate_this.py
+drwxrwxr-x. admin_user git system_u:object_r:lib_t:s0       lib/python3.3/
+-rw-rw-r--. admin_user git system_u:object_r:lib_t:s0       lib/python3.3/site.py
+
+
+
+SELinux module that allows setpgid might be needed:
+[root@devel test]# cat setpgid.te
+
+module setpgid 1.0;
+
+require {
+	type httpd_sys_script_t;
+	class process setpgid;
+}
+
+#============= httpd_sys_script_t ==============
+allow httpd_sys_script_t self:process setpgid;
+
+
+---------------------------------------
+# Above module was generated with audit2allow
+
+
+Apache 2.2 configuration
+------------------------
+
+	Alias / /srv/ca.example.com/test/Foobar.launcher
+	<Directory /srv/ca.example.com/test>
+		 SetHandler fcgid-script
+		 Options +ExecCGI
+		 Order allow,deny
+		Allow from all
+	</Directory>
+
+
+
+cat /srv/ca.example.com/test/Foobar.launcher
+#!/bin/bash
+PWD=`dirname $0`
+scl enable python33 "bash -c 'source $PWD/bin/activate; $PWD/testfcgi.py'"
+---
+-rwxrwxr-x. apache git unconfined_u:object_r:httpd_sys_content_t:s0 /srv/ca.example.com/test/Foobar.launcher
+
+-----------------------------------------------
+
+testfcgi.py contains:
+---------------------
+
+#!/usr/bin/env python
+import sys
+
+from paste.deploy import loadapp
+from flup.server.fcgi_fork import WSGIServer
+
+app = loadapp('config:/srv/ca.example.com/test/fcgi.ini')
+server = WSGIServer(app)
+server.run()
+
+And has the following permissions
+---------------------------------
+-rwxrwxr-x. spider git unconfined_u:object_r:httpd_sys_content_t:s0 testfcgi.py
+
+
+With SQLite as a database, apache needs write-access to the directory:
+---------------------------------------------------------------------
+sudo chgrp apache project
+sudo chgrp apache project/*.sqlite
+chcon -t httpd_sys_rw_content_t project/*sqlite
+
+
+These are mostly notes from deploying, also see:
+http://pyramid-cookbook.readthedocs.org/en/latest/deployment/

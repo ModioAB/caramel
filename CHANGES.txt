@@ -1,3 +1,11 @@
+1.0
+---
+
+-  Capable of running in production for both servers & embedded clients
+-  Matches the CA cert for "enforced" Subject lines, and adds the appropriate
+   X509 extensions to certificates.
+
+
 0.0
 ---
 

@@ -33,6 +33,20 @@ HASH = {1024: "sha1",
         2048: "sha256",
         4096: "sha512"}
 
+# These parts of the subject _must_ match our CA key
+CA_SUBJ_MATCH = (b"C", b"ST", b"L", b"O")
+
+
+# Returns the parts we _care_ about in the subject, from a ca file
+def get_ca_prefix(ca_cert, subj_match=CA_SUBJ_MATCH):
+    cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, ca_cert)
+    subject = cert.get_subject()
+    components = subject.get_components()
+    matches = tuple((n.decode("utf8"), v.decode("utf8"))
+                    for n, v in components
+                    if n in subj_match)
+    return matches
+
 
 # XXX: probably error prone for cases where things are specified by string
 def _fkcolumn(referent, *args, **kwargs):
@@ -124,9 +138,9 @@ class CSR(Base):
 
     @_reify
     def subject_components(self):
-        compontents = self.subject.get_components()
+        components = self.subject.get_components()
         return tuple((n.decode("utf8"), v.decode("utf8"))
-                     for n, v in compontents)
+                     for n, v in components)
 
     @classmethod
     def valid(cls):
@@ -270,6 +284,7 @@ class Certificate(Base):
                 cert.set_notBefore(before)
             del before
 
+        subjectAltName = bytes("DNS:" + CSR.commonname, 'utf-8')
         extensions = [
             _crypto.X509Extension(b'basicConstraints',
                                   critical=True,
@@ -277,10 +292,13 @@ class Certificate(Base):
             _crypto.X509Extension(b'extendedKeyUsage',
                                   critical=True,
                                   value=b'clientAuth,serverAuth'),
+            _crypto.X509Extension(b"subjectAltName",
+                                  critical=False,
+                                  value=subjectAltName),
             _crypto.X509Extension(b"subjectKeyIdentifier",
                                   critical=False,
                                   value=b"hash",
-                                  subject=cert)
+                                  subject=cert),
         ]
         cert.add_extensions(extensions)
         # subjectKeyIdentifier has to be present before adding auth ident

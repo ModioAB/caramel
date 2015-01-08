@@ -1,12 +1,16 @@
 #! /bin/bash
+## This script are tasks to be done on the server after initial deployment.
+## This includes setting up local environments and virtualenvs
+## This should only be called from "deploy-caramel.sh"
+
 set -e
 ## get the paths
 : ${PIP_DOWNLOAD_CACHE:=$HOME/pip-downloads}
+export PIP_DOWNLOAD_CACHE
 HERE="$(dirname "$(readlink -f "$0")")"
 PROJECT="$1"
 REV="$2"
 venv=/opt/venv/"$PROJECT-$REV"
-export PIP_DOWNLOAD_CACHE
 
 # Create new VirtualEnv
 scl enable python33 "virtualenv-3.3 $venv"
@@ -23,7 +27,7 @@ chmod -R go+rX "$HERE"
 chmod -R go+rX "$venv"
 
 # Permissions inside Virtual Env
-chcon -t httpd_sys_content_t ${venv}/bin/activate
+chcon -t httpd_sys_content_t "${venv}/bin/activate"
 
 
 ## Set up venv inside web-root
@@ -34,5 +38,4 @@ ln -s "$venv" "$PROJECT"-venv
 chcon -t httpd_sys_content_t "$PROJECT".ini
 # Below only works for root, do it manually.
 echo "As root: chcon -t httpd_sys_content_rw_t caramel.sqlite"
-
-sudo /usr/local/bin/killcaramel
+# You probably want to do something to kill all old instances of caramel here below.

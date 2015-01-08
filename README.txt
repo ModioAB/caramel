@@ -150,7 +150,7 @@ Or point git config hooks.flake8 to the flake8 executable:
 - git config hooks.flake8 /path/to/flake8
 
 
-Dependenceis needed from the Operatingsystem
+Dependencies needed from the Operatingsystem
 --------------------------------------------
 
 * libffi-devel (on RHEL/CentOS)
@@ -185,3 +185,16 @@ generate your own certificates.
 caramel-refresh is intended to be run in a cron job on servers (or clients).
 Please make sure you run the job as the correct user, so permissions aren't a
 problem afterwards.
+
+
+License
+-------
+
+We have chosen the GNU Affero GPL v3 license for the project. We see no need
+for others to keep modification to this software a secret, and we welcome
+outside providers. Just because the code is GPLv3, doesn't prevent you from
+keeping your keys & certificates private.
+
+For the organizations using this, there should be no additional gain to be
+had from keeping the source code secret, and if you think there is any such
+gain, please contact us.
