@@ -23,12 +23,10 @@ requires = [
 deplinks = [
     "http://hg.saddi.com/flup-py3.0/archive/cc23b715b120.tar.gz" +
     "#egg=flup-1.0.4.dev",
-    "https://github.com/MyTemp/pyopenssl/tarball/no-more-T61Strings" +
-    "#egg=pyOpenSSL-0.15.dev"
     ]
 
 setup(name="caramel",
-      version="0.0",
+      version="1.0",
       description="caramel",
       long_description=README + "\n\n" + CHANGES,
       classifiers=[
@@ -37,10 +35,10 @@ setup(name="caramel",
           "Topic :: Internet :: WWW/HTTP",
           "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
           ],
-      author="",
-      author_email="",
-      url="",
-      keywords="web wsgi bfg pylons pyramid",
+      author="D.S. Ljungmark",
+      author_email="spider@modio.se",
+      url="https://github.com/MyTemp/caramel",
+      keywords="web wsgi bfg pylons pyramid certificates x509 ca cert",
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
