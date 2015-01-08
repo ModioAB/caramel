@@ -14,10 +14,10 @@ Caramel makes it easier (it's never completely easy) to run your own
 certificate authority and manage and maintain keys and signing periods.
 
 Caramel focuses on reliably and continuously updating short-lived certificates
-where clients (and embedded devices) continue to "phone home" and fetch 
+where clients (and embedded devices) continue to "phone home" and fetch
 updated certificates.  This means that we do not have to provide OCSP and CRL
 endpoints to handle compromised certificates, but only have to stop updating
-the certificate. This also means that Expired certificates should be 
+the certificate. This also means that expired certificates should be
 considered broken.
 
 
@@ -25,7 +25,7 @@ How does Caramel work?
 ----------------------
 
 Caramel is a REST-ful web application that accepts certificate signing
-requests (CSR) from anyone, stores this, and possibly returns a signed
+requests (CSR) from anyone, stores them, and possibly returns a signed
 certificate.
 
 A client pushes its certificate signing request (CSR) to the public web
@@ -93,6 +93,21 @@ wherever possible, and we try to **not** implement our own algorithms for
 fear of doing it wrongly.
 
 
+Maintaining your certificates
+-----------------------------
+
+In a server environment with several certificates you usually end up
+rotating/refreshing them in a cron job.
+Included is a tool called "caramel-refresh.sh" that will parse a config file,
+and automatically refresh all certificates matching. This requires the original
+CSR and certificate to be in place. See "request-certificate" for a tool to
+generate your own certificates.
+
+caramel-refresh is intended to be run in a cron job on servers (or clients).
+Please make sure you run the job as the correct user, so permissions aren't a
+problem afterwards.
+
+
 Getting Started
 ---------------
 
@@ -157,8 +172,8 @@ Or point git config hooks.flake8 to the flake8 executable:
 - git config hooks.flake8 /path/to/flake8
 
 
-Dependencies needed from the Operatingsystem
---------------------------------------------
+Dependencies needed from the operating system
+---------------------------------------------
 
 * libffi-devel (on RHEL/CentOS)
 * openssl, openssl-devel
@@ -177,21 +192,6 @@ In order to run the python3 interpreter instead of the normal python2
 interpreter, you should configure the hook as this:
 
 - git config hooks.virtualenv /usr/bin/virtualenv -p /usr/bin/python3
-
-
-Maintaining your certificates
------------------------------
-
-In a server environment with several certificates you usually end up
-rotating/refreshing them in a cron job.
-Included is a tool called "caramel-refresh.sh" that will parse a config file,
-and automatically refresh all certificates matching. This requires the original
-CSR and certificate to be in place. See "request-certificate" for a tool to
-generate your own certificates.
-
-caramel-refresh is intended to be run in a cron job on servers (or clients).
-Please make sure you run the job as the correct user, so permissions aren't a
-problem afterwards.
 
 
 License
