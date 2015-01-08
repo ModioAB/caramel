@@ -13,6 +13,13 @@ use in a secure manner.
 Caramel makes it easier (it's never completely easy) to run your own
 certificate authority and manage and maintain keys and signing periods.
 
+Caramel focuses on reliably and continuously updating short-lived certificates
+where clients (and embedded devices) continue to "phone home" and fetch 
+updated certificates.  This means that we do not have to provide OCSP and CRL
+endpoints to handle compromised certificates, but only have to stop updating
+the certificate. This also means that Expired certificates should be 
+considered broken.
+
 
 How does Caramel work?
 ----------------------
