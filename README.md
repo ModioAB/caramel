@@ -1,5 +1,5 @@
 Caramel README
-==================
+==============
 
 What is Caramel?
 ----------------
@@ -36,7 +36,7 @@ A backend (administration) web application talks to the same database
 (preferably from inside an intranet or other secure place), and lets you
 view signing requests, and sign them.
 
-The certificates are signed with a *short* lifetime (30 days), and client
+The certificates are signed with a *short* lifetime (3 days), and client
 scripts are supposed to regularly contact the public web service and
 download a freshly signed certificate. Root (Certificate Authority) keys
 only live on the "administration" part, and should preferably be kept on a
@@ -98,48 +98,44 @@ Maintaining your certificates
 
 In a server environment with several certificates you usually end up
 rotating/refreshing them in a cron job.
-Included is a tool called "caramel-refresh.sh" that will parse a config file,
+Included is a tool called `caramel-refresh.sh` that will parse a config file,
 and automatically refresh all certificates matching. This requires the original
-CSR and certificate to be in place. See "request-certificate" for a tool to
+CSR and certificate to be in place. See `request-certificate` for a tool to
 generate your own certificates.
 
-caramel-refresh is intended to be run in a cron job on servers (or clients).
+`caramel-refresh` is intended to be run in a cron job on servers (or clients).
 Please make sure you run the job as the correct user, so permissions aren't a
 problem afterwards.
 
 
 Getting Started
 ---------------
-
-- cd <directory containing this file>
-
-- $venv/bin/python setup.py develop
-
-- $venv/bin/initialize_caramel_db development.ini
-
-- $venv/bin/pserve development.ini
-
+```
+cd <directory containing this file>
+$venv/bin/python setup.py develop
+$venv/bin/caramel_initialize_db development.ini
+$venv/bin/caramel_ca development.ini
+$venv/bin/pserve development.ini
+```
 
 Running Tests
 -------------
-
-- cd <directory containing this file>
-
-- $venv/bin/python setup.py develop
-
-- $venv/bin/python -m unittest discover
+```
+cd <directory containing this file>
+$venv/bin/python setup.py develop
+$venv/bin/python -m unittest discover
+```
 
 
 Running Tests with Nose
 -----------------------
 
-- cd <directory containing this file>
-
-- $venv/bin/python setup.py develop
-
-- $venv/bin/pip install nose
-
-- nosetests
+```
+cd <directory containing this file>
+$venv/bin/python setup.py develop
+$venv/bin/pip install nose
+nosetests
+```
 
 
 Installing the Commit Hook
@@ -154,10 +150,10 @@ a problem for others.
 
 
 Install the hooks with the following commands:
-
-- cd <directory containing this file>
-
-- ln -rs pre-commit-checks .git/hooks/pre-commit
+```
+cd <directory containing this file>
+ln -rs pre-commit-checks .git/hooks/pre-commit
+```
 
 Please note the "-r" flag to ln, as it makes sure the relative link keeps the
 correct path.
@@ -165,11 +161,11 @@ correct path.
 For the pre-commit hook to work, you need to have flake8 available. Either
 install flake8 via:
 
-- pip install flake8
+`pip install flake8`
 
 Or point git config hooks.flake8 to the flake8 executable:
 
-- git config hooks.flake8 /path/to/flake8
+`git config hooks.flake8 /path/to/flake8`
 
 
 Dependencies needed from the operating system
@@ -186,17 +182,16 @@ Making sure you have VirtualEnv
 To use the commit hook you need virtualenv available.
 If you do not have virtualenv in your path, please point to it with:
 
-- git config hooks.virtualenv /path/to/virtualenv
+`git config hooks.virtualenv /path/to/virtualenv`
 
 In order to run the python3 interpreter instead of the normal python2
 interpreter, you should configure the hook as this:
 
-- git config hooks.virtualenv /usr/bin/virtualenv -p /usr/bin/python3
+`git config hooks.virtualenv /usr/bin/virtualenv -p /usr/bin/python3`
 
 
 License
 -------
-
 We have chosen the GNU Affero GPL v3 license for the project. We see no need
 for others to keep modification to this software a secret, and we welcome
 outside providers. Just because the code is GPLv3, doesn't prevent you from
