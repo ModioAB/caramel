@@ -37,6 +37,16 @@ HASH = {1024: "sha1",
 CA_SUBJ_MATCH = (b"C", b"ST", b"L", b"O")
 
 
+def _crypto_patch():
+    """hijack _crypto internal lib and violate the default text encoding.
+    https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
+    https://github.com/pyca/pyopenssl/issues/129 is an open issue
+    about it."""
+    _crypto._lib.ASN1_STRING_set_default_mask_asc(b'utf8only')
+
+_crypto_patch()
+
+
 # Returns the parts we _care_ about in the subject, from a ca file
 def get_ca_prefix(ca_cert, subj_match=CA_SUBJ_MATCH):
     cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, ca_cert)
