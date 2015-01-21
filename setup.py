@@ -15,7 +15,7 @@ requires = [
     "zope.sqlalchemy",
     "waitress",
     "cryptography>=0.5.dev1",
-    "pyOpenSSL>=0.15.dev",
+    "pyOpenSSL>=0.14",
     "flup<=1.0.4.dev",
     "python-dateutil",
     ]
