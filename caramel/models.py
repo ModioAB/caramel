@@ -157,6 +157,12 @@ class CSR(Base):
         return cls.query().filter_by(rejected=False).all()
 
     @classmethod
+    def unsigned(cls):
+        all_signed = _sa.select([Certificate.csr_id])
+        return cls.query().filter_by(rejected=False).\
+            filter(CSR.id.notin_(all_signed)).all()
+
+    @classmethod
     def by_sha256sum(cls, sha256sum):
         return cls.query().filter_by(sha256sum=sha256sum).one()
 
@@ -167,7 +173,7 @@ class CSR(Base):
     def __str__(self):
         return ("<{0.__class__.__name__} "  # auto-concatenation (no comma)
                 "sha256sum={0.sha256sum:8.8}... "
-                "rejected: {0.rejected!r}"
+                "rejected: {0.rejected!r} "
                 "OU={0.orgunit!r} CN={0.commonname!r}>").format(self)
 
     def __repr__(self):
@@ -274,8 +280,11 @@ class Certificate(Base):
         """
         notAfter = int(lifetime.total_seconds())
         # Transform "raw" PEM text to usable objects
-        sign_key = _crypto.load_privatekey(_crypto.FILETYPE_PEM, ca_key)
-        sign_cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, ca_cert)
+        try:
+            sign_key = _crypto.load_privatekey(_crypto.FILETYPE_PEM, ca_key)
+            sign_cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, ca_cert)
+        except _crypto.Error:
+            raise ValueError("Failed to load signing key or  certificate")
         del ca_cert, ca_key
 
         # TODO: Verify that the data in DB matches csr_add rules in views.py
