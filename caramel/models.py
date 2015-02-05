@@ -114,7 +114,8 @@ class CSR(Base):
     accessed = _orm.relationship("AccessLog", backref="csr",
                                  order_by="AccessLog.when.desc()")
     certificates = _orm.relationship("Certificate", backref="csr",
-                                     order_by="Certificate.not_after.desc()")
+                                     order_by="Certificate.not_after.desc()",
+                                     lazy="subquery")
 
     def __init__(self, sha256sum, reqtext):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
@@ -155,6 +156,18 @@ class CSR(Base):
     @classmethod
     def valid(cls):
         return cls.query().filter_by(rejected=False).all()
+
+    @classmethod
+    def refreshable(cls):
+        """Using "valid" and looking at csr.certificates doesn't scale.
+        Better to do it in the Query."""
+
+        # Options subqueryload is to prevent thousands of small queries and
+        # instead batch load the certificates at once
+        all_signed = _sa.select([Certificate.csr_id])
+        return cls.query().\
+            filter_by(rejected=False).\
+            filter(CSR.id.in_(all_signed)).all()
 
     @classmethod
     def unsigned(cls):
