@@ -18,6 +18,7 @@ from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPNotFound,
     HTTPForbidden,
+    HTTPError
     )
 from pyramid.view import view_config
 
@@ -69,17 +70,14 @@ def raise_for_subject(components, required_prefix):
 
 
 # XXX: Is this the right way? Catch-class JSON converter of Exceptions
-@view_config(context=HTTPRequestEntityTooLarge)
-@view_config(context=HTTPLengthRequired)
-@view_config(context=HTTPBadRequest)
-@view_config(context=HTTPForbidden)
-@view_config(context=HTTPNotFound)
+@view_config(context=HTTPError)
 def HTTPErrorToJson(exc, request):
     exc.json_body = {
-        "message": exc.message,
-        "status": exc.status,
+        "status": exc.code,
+        "title": exc.title,
+        "detail": exc.detail
     }
-    exc.content_type = "application/json"
+    exc.content_type = "application/problem+json"
     request.response = exc
     return request.response
 
@@ -96,7 +94,7 @@ def csr_add(request):
     except ValueError as err:
         raise HTTPBadRequest("crypto error: {0}".format(err))
 
-    # XXX: figure out what to verify in subject, and how
+    # Verify the parts of the subject we care about
     CA_PREFIX = _get_ca_prefix(request.registry.settings['ca.cert'])
     try:
         raise_for_subject(csr.subject_components, CA_PREFIX)
