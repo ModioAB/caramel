@@ -15,15 +15,30 @@ import sys
 def cmdline():
     parser = argparse.ArgumentParser()
     parser.add_argument("inifile")
-    parser.add_argument("--sign", metavar="id",
-                        help="Sign the CSR with this id")
-    parser.add_argument("--reject", metavar="id",
-                        help="Reject the CSR with this id")
     parser.add_argument("--long", help="Generate a long lived cert(1 year)",
                         action="store_true")
-    parser.add_argument("--refresh", help="Sign all certificates previously"
-                        "signed certificates again.",
+
+    parser.add_argument("--list", help="List active requests, do nothing else",
                         action="store_true")
+
+    exclusives = parser.add_mutually_exclusive_group()
+    exclusives.add_argument("--sign", metavar="id", type=int,
+                            help="Sign the CSR with this id")
+    exclusives.add_argument("--reject", metavar="id", type=int,
+                            help="Reject the CSR with this id")
+
+    cleanout = parser.add_mutually_exclusive_group()
+    cleanout.add_argument("--clean", metavar="id", type=int,
+                          help="Remove all older certificates for this CSR")
+    cleanout.add_argument("--wipe", metavar="id", type=int,
+                          help="Wipe all certificates for this CSR")
+
+    bulk = parser.add_mutually_exclusive_group()
+    bulk.add_argument("--refresh", help="Sign all certificates previously "
+                      "signed certificates again.", action="store_true")
+
+    bulk.add_argument("--cleanall", help="Clean all older certificates.",
+                      action="store_true")
 
     args = parser.parse_args()
 
@@ -117,11 +132,6 @@ def main():
     life_long = calc_lifetime(relativedelta(hours=_long))
     del _short, _long
 
-    if not args.sign and not args.refresh and not args.reject:
-        print_list()
-        closer()
-        sys.exit(0)
-
     try:
         with open(settings['ca.cert'], 'rt') as f:
             ca_cert = f.read()
@@ -131,21 +141,25 @@ def main():
     except KeyError:
         error_out("config file needs ca.cert and ca.key properly set")
 
-    if args.sign and args.refresh:
-        error_out("Only refresh or sign, not both")
-
-    if args.reject and args.refresh:
-        error_out("Reject doesn't go well with other arguments.")
-
-    if args.reject and args.sign:
-        error_out("Reject doesn't go well with other arguments.")
-
     if life_short > life_long:
         error_out("Short lived certs ({0}) shouldn't last longer "
                   "than long lived certs ({1})".format(life_short, life_long))
+    if args.list:
+        print_list()
+        closer()
+        sys.exit(0)
 
     if args.reject:
         csr_reject(args.reject)
+
+    if args.wipe:
+        error_out("Not implemented yet")
+
+    if args.clean:
+        error_out("Not implemented yet")
+
+    if args.cleanall:
+        error_out("Not implemented yet")
 
     if args.sign:
         if args.long:

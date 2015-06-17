@@ -114,7 +114,8 @@ class CSR(Base):
     accessed = _orm.relationship("AccessLog", backref="csr",
                                  order_by="AccessLog.when.desc()")
     certificates = _orm.relationship("Certificate", backref="csr",
-                                     order_by="Certificate.not_after.desc()")
+                                     order_by="Certificate.not_after.desc()",
+                                     cascade="all, delete-orphan")
 
     def __init__(self, sha256sum, reqtext):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
