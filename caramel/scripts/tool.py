@@ -71,6 +71,25 @@ def calc_lifetime(lifetime=relativedelta(hours=24)):
     return future - now
 
 
+def csr_wipe(number):
+    with transaction.manager:
+        CSR = models.CSR.query().get(number)
+        if not CSR:
+            error_out("ID not found")
+        CSR.certificates = []
+        CSR.save()
+
+
+def csr_clean(number):
+    with transaction.manager:
+        CSR = models.CSR.query().get(number)
+        if not CSR:
+            error_out("ID not found")
+        certs = sorted(CSR.certificates, key=lambda cert: cert.id)
+        CSR.certificates = [certs[-1]]
+        CSR.save()
+
+
 def csr_reject(number):
     with transaction.manager:
         CSR = models.CSR.query().get(number)
