@@ -82,7 +82,7 @@ class CertificateRequest(object):
         _, value = decode_openssl_utf8(output).strip().split('subject= ', 1)
         prefix, original_cn = value.split('/CN=')
         if prefix == '/C=SE/OU=Caramel/L=Linköping/O=Modio AB/ST=Östergötland':
-            prefix = '/C=SE/ST=Östergötland/L=Linköping/O=Modio AB/OU=Caramel'
+            prefix = '/C=SE/L=Linköping/O=Modio AB/ST=Östergötland/OU=Caramel'
         return '{}/CN={}'.format(prefix, self.client_id)
 
     def ensure_valid_key_file(self):
