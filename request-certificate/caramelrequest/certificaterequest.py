@@ -168,7 +168,7 @@ class CertificateRequest(object):
                 break
             else:
                 logging.error('Request failed: {}'
-                              .format(parse_html(response)))
+                              .format(parse(response)))
                 response.raise_for_status()
                 break
 
@@ -180,6 +180,14 @@ class CertificateRequest(object):
 
 def printerr(text):
     sys.stderr.write(text + '\n')
+
+
+def parse(response):
+    try:
+        result = response.json()
+    except Exception:
+        result = parse_html(response)
+    return result
 
 
 def parse_html(response):
