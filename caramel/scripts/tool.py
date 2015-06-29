@@ -75,6 +75,19 @@ def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
         if CSR.rejected:
             error_out("Refusing to sign rejected ID")
 
+        if CSR.certificates:
+            today = datetime.datetime.now()
+            cert = CSR.certificates[0]
+            cur_lifetime = cert.not_after - cert.not_before
+            # Cert hasn't expired, and currently has longer lifetime
+            if (cert.not_after > today) and (cur_lifetime > timedelta):
+                msg = ("Currently has a valid certificate with {} lifetime, "
+                       "new certificate would have {} lifetime. \n"
+                       "Clean out existing certificates before shortening "
+                       "lifetime.\n"
+                       "The old certificate is still out there.")
+                error_out(msg.format(cur_lifetime, timedelta))
+
         cert = models.Certificate.sign(CSR, ca_key, ca_cert,
                                        timedelta, backdate)
         cert.save()
