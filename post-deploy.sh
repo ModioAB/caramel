@@ -10,6 +10,8 @@ export PIP_DOWNLOAD_CACHE
 HERE="$(dirname "$(readlink -f "$0")")"
 PROJECT="$1"
 REV="$2"
+SERVER="$3"
+
 venv=/opt/venv/"$PROJECT-$REV"
 
 # Create new VirtualEnv
@@ -33,7 +35,7 @@ chcon -t httpd_sys_content_t "${venv}/bin/activate"
 ## Set up venv inside web-root
 cd "$HERE"/..
 rm -f "$PROJECT".ini "$PROJECT"-venv
-ln -s "$HERE"/production.ini "$PROJECT".ini
+ln -s "$HERE"/"$SERVER".ini "$PROJECT".ini
 ln -s "$venv" "$PROJECT"-venv
 chcon -t httpd_sys_content_t "$PROJECT".ini
 # Below only works for root, do it manually.
