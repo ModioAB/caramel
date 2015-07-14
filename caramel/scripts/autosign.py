@@ -84,8 +84,6 @@ def cmdline():
     parser = argparse.ArgumentParser()
     parser.add_argument("inifile")
     parser.add_argument("--delay", help="How long to sleep. (ms)")
-    parser.add_argument("--valid",
-                        help="How many hours the certificate is valid for")
     args = parser.parse_args()
     return args
 
@@ -107,7 +105,8 @@ def main():
     engine = create_engine(settings['sqlalchemy.url'])
     models.init_session(engine)
     delay = int(settings.get('delay', 500)) / 1000
-    valid = int(settings.get('valid', 3))
+
+    valid = int(settings.get('lifetime.short', 3))
     delta = datetime.timedelta(days=0, hours=valid)
     del valid
 
