@@ -4,8 +4,8 @@ MY_CRT=/etc/pki/tls/certs/client.example.com.crt
 MY_CSR=/etc/pki/tls/certs/client.example.com.csr
 MY_KEY=/etc/pki/tls/private/client.example.com.key
 
-CLIENTID=`cat /etc/machine-id`   # For example
 CLIENTID=`sed -e 's/://g' /sys/class/net/eth0/address`
+CLIENTID=`cat /etc/machine-id`   # For example
 
 SUBJECT="/O=ExampleInc/OU=ExampleCom/CN=$CLIENTID"
 POST_URL=https://caramel.example.com/ra

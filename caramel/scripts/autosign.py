@@ -56,6 +56,7 @@ def csr_sign(csr, key, cert, delta):
 
     with transaction.manager:
         cert = models.Certificate.sign(csr, key, cert, delta)
+        logger.info("Signing: {0} valid for {1}".format(csr.commonname, delta))
         cert.save()
     return
 
@@ -95,12 +96,25 @@ def error_out(message, closer):
     sys.exit(1)
 
 
+def log_strange_csrs():
+    csrs = models.CSR.unsigned()
+    for csr in csrs:
+        if csr.rejected:
+            logging.info("Skipping rejected csr: {}".format(csr.commonname))
+
+        try:
+            uuid.UUID(csr.commonname)
+        except ValueError:
+            logger.warn("Unsigned, Non-UUID CSR: {}".format(csr.commonname))
+
+
 def main():
     """Main, as called from the script instance by pyramid"""
-    logging.basicConfig()
-    logger.setLevel(logging.DEBUG)
     args = cmdline()
     env = bootstrap(args.inifile)
+    logging.config.fileConfig(args.inifile)
+    logger.setLevel(logging.DEBUG)
+
     settings, closer = env['registry'].settings, env['closer']
     engine = create_engine(settings['sqlalchemy.url'])
     models.init_session(engine)
@@ -119,8 +133,6 @@ def main():
         error_out("config file lacks ca.cert or ca.key", closer)
     except OSError:
         error_out("Key or cert not found", closer)
+
+    log_strange_csrs()
     mainloop(delay, key, cert, delta)
-
-
-if __name__ == "__main__":
-    logging.basicConfig()
