@@ -32,14 +32,8 @@ chcon -t httpd_sys_content_t "${venv}/bin/activate"
 
 ## Set up venv inside web-root
 cd "$HERE"/..
-rm -f "$PROJECT"-venv
-
-# create link if it doesn't exist
-test -e "$PROJECT".ini || ln -s "$HERE"/production.ini "$PROJECT".ini
-
-# Update the link if it exists
-test -L "$PROJECT".ini && ln -sf "$HERE"/production.ini "$PROJECT".ini
-
+rm -f "$PROJECT".ini "$PROJECT"-venv
+ln -s "$HERE"/production.ini "$PROJECT".ini
 ln -s "$venv" "$PROJECT"-venv
 chcon -t httpd_sys_content_t "$PROJECT".ini
 # Below only works for root, do it manually.
