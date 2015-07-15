@@ -150,13 +150,15 @@ class CertificateRequest(object):
 
         response = session.get(url)
         while True:
+            sleep = 1
             if response.status_code == 404:
                 logging.info('CSR not posted; posting it')
                 response = session.post(url, csr)
             elif response.status_code == 202 or response.status_code == 304:
                 logging.info('CSR not processed yet; waiting ...')
                 try:
-                    time.sleep(15)
+                    time.sleep(sleep)
+                    sleep = min(sleep * 2, 15)
                 except KeyboardInterrupt:
                     break
                 response = session.get(url)
