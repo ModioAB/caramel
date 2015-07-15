@@ -36,7 +36,7 @@ EOF
     die "Please add correct arguments"
 fi
 
-CURL_OPTS="--silent --show-error --connect-timeout 30 --max-time 60"
+CURL_OPTS="--silent --show-error --connect-timeout 30 --max-time 60 --tlsv1"
 POST_URL="$1"
 
 if [ "$#" -gt 1 ]
