@@ -5,7 +5,6 @@ import argparse
 from pyramid.paster import bootstrap
 from pyramid.settings import asbool
 from sqlalchemy import create_engine
-from dateutil.relativedelta import relativedelta
 import caramel.models as models
 import transaction
 import datetime
@@ -66,12 +65,6 @@ def print_list():
         print(output)
 
 
-def calc_lifetime(lifetime=relativedelta(hours=24)):
-    now = datetime.datetime.now()
-    future = now + lifetime
-    return future - now
-
-
 def csr_wipe(number):
     with transaction.manager:
         CSR = models.CSR.query().get(number)
@@ -110,7 +103,7 @@ def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
             error_out("Refusing to sign rejected ID")
 
         if CSR.certificates:
-            today = datetime.datetime.now()
+            today = datetime.datetime.utcnow()
             cert = CSR.certificates[0]
             cur_lifetime = cert.not_after - cert.not_before
             # Cert hasn't expired, and currently has longer lifetime
@@ -140,7 +133,7 @@ def refresh(csr, ca_key, ca_cert, lifetime, backdate):
 def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
     csrlist = models.CSR.valid()
     lifetimes = models.CSR.most_recent_lifetime()
-    now = datetime.datetime.now()
+    now = datetime.datetime.utcnow()
     futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         for csr in csrlist:
@@ -183,8 +176,8 @@ def main():
 
     _short = int(settings.get('lifetime.short', 48))
     _long = int(settings.get('lifetime.long', 7*24))
-    life_short = calc_lifetime(relativedelta(hours=_short))
-    life_long = calc_lifetime(relativedelta(hours=_long))
+    life_short = datetime.timedelta(hours=_short)
+    life_long = datetime.timedelta(hours=_long)
     del _short, _long
 
     try:

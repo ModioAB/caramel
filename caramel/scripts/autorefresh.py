@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def csr_refresh(csr, before, after, settings):
     """ Refreshes a CSR if need be"""
-    now = datetime.datetime.now()
+    now = datetime.datetime.utcnow()
     if csr.rejected:
         return
 
