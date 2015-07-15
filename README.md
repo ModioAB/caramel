@@ -190,6 +190,37 @@ interpreter, you should configure the hook as this:
 `git config hooks.virtualenv /usr/bin/virtualenv -p /usr/bin/python3`
 
 
+Using the Autosign and Autorefresh Daemons
+------------------------------------------
+
+There are two shell scripts that demonstrate how to set up the scl python3.3
+environment, as well as two systemd service files to launch the autosign and
+autorefresh daemon. All those files live in the utils/ directory.
+
+Place the shellscripts in a suitable directory, and modify the service files
+accordingly.
+
+The Autosign daemon will sign any request where the CommonName is a valid UUID.
+This is for use in application authentication, or other places where you want a
+"leap of faith" mode.
+
+The Autorefresh daemon will refresh all non-rejected certificates once they
+have reached half their lifetime.
+
+Using caramel-refresh.sh
+------------------------
+
+caramel-refresh is a small shellscript that we use on servers which have
+long-lived certificates. It only fetches updated certificates, and places them
+according to the configuration file.
+
+It can be used by manually copying it to `/usr/local/bin` on a machine, and
+setting up the config file, then launching it via `cron` or similar.
+
+This allows you to refresh certificates without having a full python/openssl
+installation.
+
+
 License
 -------
 We have chosen the GNU Affero GPL v3 license for the project. We see no need
