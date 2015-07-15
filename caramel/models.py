@@ -215,7 +215,7 @@ class CSR(Base):
     def __str__(self):
         return ("<{0.__class__.__name__} "  # auto-concatenation (no comma)
                 "sha256sum={0.sha256sum:8.8}... "
-                "rejected: {0.rejected!r}"
+                "rejected: {0.rejected!r} "
                 "OU={0.orgunit!r} CN={0.commonname!r}>").format(self)
 
     def __repr__(self):
