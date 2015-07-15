@@ -80,24 +80,35 @@ def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
 
 
 def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
+    now = datetime.datetime.now()
+
     with transaction.manager:
-        try:
-            csrlist = models.CSR.valid()
-        except:
-            error_out("No CSR's found")
+        lifetimes = models.CSR.most_recent_lifetime()
+        csrlist = models.CSR.valid()
 
         for csr in csrlist:
-            if not csr.certificates:
+            if csr.id not in lifetimes:
                 continue
-            last = csr.certificates[0]
-            old_lifetime = last.not_after - last.not_before
+            before, after = lifetimes[csr.id]
+
+            # backdating is ugly, cap it.
+            lifetime = min(after - before, lifetime_long)
+            half_life = lifetime / 2
+
+            if now < after - half_life:
+                continue
 
             # XXX: In a backdated cert, this is almost always true.
-            if old_lifetime >= lifetime_long:
+            if lifetime >= lifetime_long:
+                print("Refreshing {} with lifetime {}, backdate={}"
+                      .format(csr, lifetime_long, backdate))
+
                 cert = models.Certificate.sign(csr, ca_key, ca_cert,
                                                lifetime_long, backdate)
             else:
                 # Never backdate short-lived certs
+                print("Refreshing {} with lifetime {}"
+                      .format(csr, lifetime_short))
                 cert = models.Certificate.sign(csr, ca_key, ca_cert,
                                                lifetime_short, False)
             cert.save()

@@ -159,7 +159,50 @@ class CSR(Base):
 
     @classmethod
     def valid(cls):
-        return cls.query().filter_by(rejected=False).all()
+        return cls.query().filter_by(rejected=False)
+
+    @classmethod
+    def stale(cls, expiration_date):
+        """ Select CSRs that will be expired by expiration_date"""
+        subq = (DBSession.query(Certificate.csr_id)
+                .distinct()
+                .filter(Certificate.not_after < expiration_date))
+
+        return cls.valid().filter(CSR.id.in_(subq))
+
+    @classmethod
+    def most_recent_lifetime(cls):
+        """ Select CSR id and their matching not_before, not_after
+        """
+        from sqlalchemy.orm import aliased
+        from sqlalchemy.sql.expression import and_, func
+
+        cert = aliased(Certificate)
+
+        subs = (DBSession.query(cert.csr_id,
+                                func.max(cert.not_after)
+                                .label('max'))
+                         .group_by(cert.csr_id)
+                         .subquery())
+
+        certs = (DBSession.query(Certificate.csr_id,
+                                 Certificate.not_before,
+                                 Certificate.not_after)
+                 .join(subs, and_(Certificate.csr_id == subs.columns.csr_id,
+                                  Certificate.not_after == subs.columns.max)))
+
+        # We have to do filtering in code, as SQLite can't compare DateTimes
+        # .filter((Certificate.lifetime * percentage) >
+        #         (Certificate.not_after - func.now())))
+        return {csr_id: (not_before, not_after)
+                for csr_id, not_before, not_after in certs}
+
+    @classmethod
+    def signed(cls):
+        all_signed = _sa.select([Certificate.csr_id]).distinct()
+        return (cls.query()
+                .filter_by(rejected=False)
+                .filter(CSR.id.in_(all_signed)))
 
     @classmethod
     def by_sha256sum(cls, sha256sum):
