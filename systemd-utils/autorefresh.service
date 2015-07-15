@@ -1,5 +1,5 @@
 [Unit]
-Description=Caramel Autorefresh DAemon
+Description=Caramel Autorefresh Daemon
 
 [Service]
 User=admin.caramel.modio.se

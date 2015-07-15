@@ -1,5 +1,5 @@
 [Unit]
-Description=Caramel autosign
+Description=Caramel Autosign Daemon
 
 [Service]
 User=admin.caramel.modio.se
