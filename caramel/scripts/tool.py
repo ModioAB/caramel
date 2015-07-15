@@ -127,31 +127,44 @@ def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
         cert.save()
 
 
-def refresh(csr, ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
-    last = csr.certificates[0]
-    old_lifetime = last.not_after - last.not_before
-    # XXX: In a backdated cert, this is almost always true.
-    if old_lifetime >= lifetime_long:
-        cert = models.Certificate.sign(csr, ca_key, ca_cert,
-                                       lifetime_long, backdate)
-    else:
-        # Never backdate short-lived certs
-        cert = models.Certificate.sign(csr, ca_key, ca_cert,
-                                       lifetime_short, False)
+def refresh(csr, ca_key, ca_cert, lifetime, backdate):
+    print("Refreshing {} with lifetime: {}, backdate: {}"
+          .format(csr, lifetime, backdate))
+
     with transaction.manager:
+        cert = models.Certificate.sign(csr, ca_key, ca_cert,
+                                       lifetime, backdate)
         cert.save()
 
 
 def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
+    csrlist = models.CSR.valid()
+    lifetimes = models.CSR.most_recent_lifetime()
+    now = datetime.datetime.now()
+    futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
-        try:
-            csrlist = models.CSR.refreshable()
-        except:
-            error_out("No CSR's found")
-        futures = (executor.submit(refresh,
-                                   csr, ca_key, ca_cert,
-                                   lifetime_short, lifetime_long, backdate)
-                   for csr in csrlist)
+        for csr in csrlist:
+            if csr.id not in lifetimes:
+                continue
+
+            before, after = lifetimes[csr.id]
+            lifetime = min(after - before, lifetime_long)
+            half_life = lifetime / 2
+
+            if now < after - half_life:
+                continue
+
+            if lifetime >= lifetime_long:
+                new_lifetime = lifetime_long
+                new_backdate = backdate
+            else:
+                new_lifetime = lifetime_short
+                new_backdate = False
+
+            promise = executor.submit(refresh,
+                                      csr, ca_key, ca_cert,
+                                      new_lifetime, new_backdate)
+            futures.append(promise)
         for future in concurrent.futures.as_completed(futures):
             try:
                 future.result()
@@ -162,6 +175,7 @@ def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
 def main():
     args = cmdline()
     env = bootstrap(args.inifile)
+
     settings, closer = env['registry'].settings, env['closer']
     engine = create_engine(settings['sqlalchemy.url'])
     models.init_session(engine)

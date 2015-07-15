@@ -16,14 +16,19 @@ from sqlalchemy.ext.declarative import (
     declarative_base as _declarative_base,
     declared_attr as _declared_attr,
     )
+
+from sqlalchemy.ext.hybrid import (
+    hybrid_property as _hybrid_property,
+    )
+
 import sqlalchemy.orm as _orm
 from zope.sqlalchemy import ZopeTransactionExtension as _ZTE
 
 import OpenSSL.crypto as _crypto
 from pyramid.decorator import reify as _reify
 import datetime as _datetime
-import dateutil.parser
-import uuid
+import dateutil.parser as _dateutil_parser
+import uuid as _uuid
 
 
 X509_V3 = 0x2  # RFC 2459, 4.1.2.1
@@ -156,7 +161,50 @@ class CSR(Base):
 
     @classmethod
     def valid(cls):
-        return cls.query().filter_by(rejected=False).all()
+        return cls.query().filter_by(rejected=False)
+
+    @classmethod
+    def stale(cls, expiration_date):
+        """ Select CSRs that will be expired by expiration_date"""
+        subq = (DBSession.query(Certificate.csr_id)
+                .distinct()
+                .filter(Certificate.not_after < expiration_date))
+
+        return cls.valid().filter(CSR.id.in_(subq))
+
+    @classmethod
+    def most_recent_lifetime(cls):
+        """ Select CSR id and their matching not_before, not_after
+        """
+        from sqlalchemy.orm import aliased
+        from sqlalchemy.sql.expression import and_, func
+
+        cert = aliased(Certificate)
+
+        subs = (DBSession.query(cert.csr_id,
+                                func.max(cert.not_after)
+                                .label('max'))
+                         .group_by(cert.csr_id)
+                         .subquery())
+
+        certs = (DBSession.query(Certificate.csr_id,
+                                 Certificate.not_before,
+                                 Certificate.not_after)
+                 .join(subs, and_(Certificate.csr_id == subs.columns.csr_id,
+                                  Certificate.not_after == subs.columns.max)))
+
+        # We have to do filtering in code, as SQLite can't compare DateTimes
+        # .filter((Certificate.lifetime * percentage) >
+        #         (Certificate.not_after - func.now())))
+        return {csr_id: (not_before, not_after)
+                for csr_id, not_before, not_after in certs}
+
+    @classmethod
+    def signed(cls):
+        all_signed = _sa.select([Certificate.csr_id]).distinct()
+        return (cls.query()
+                .filter_by(rejected=False)
+                .filter(CSR.id.in_(all_signed)))
 
     @classmethod
     def unsigned(cls):
@@ -235,8 +283,12 @@ class Certificate(Base):
         if not req.verify(cert_pkey):
             raise ValueError("Public key of cert cannot verify request")
 
-        self.not_before = dateutil.parser.parse(self.cert.get_notBefore())
-        self.not_after = dateutil.parser.parse(self.cert.get_notAfter())
+        self.not_before = _dateutil_parser.parse(self.cert.get_notBefore())
+        self.not_after = _dateutil_parser.parse(self.cert.get_notAfter())
+
+    @_hybrid_property
+    def lifetime(self):
+        return self.not_after - self.not_before
 
     @_reify
     def cert(self):
@@ -293,16 +345,15 @@ class Certificate(Base):
 
         cert = _crypto.X509()
         cert.set_subject(CSR.req.get_subject())
-        cert.set_serial_number(int(uuid.uuid1()))
+        cert.set_serial_number(int(_uuid.uuid1()))
         cert.set_issuer(sign_cert.get_subject())
         cert.set_pubkey(CSR.req.get_pubkey())
         cert.set_version(X509_V3)
-        cert.gmtime_adj_notBefore(0)
         cert.gmtime_adj_notAfter(notAfter)
+        cert.gmtime_adj_notBefore(0)
         if backdate:
             before = sign_cert.get_notBefore()
-            if before:
-                cert.set_notBefore(before)
+            cert.set_notBefore(before)
             del before
 
         subjectAltName = bytes("DNS:" + CSR.commonname, 'utf-8')

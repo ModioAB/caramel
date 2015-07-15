@@ -53,5 +53,6 @@ setup(name="caramel",
       caramel_tool = caramel.scripts.tool:main
       caramel_ca = caramel.scripts.generate_ca:main
       caramel_autosign = caramel.scripts.autosign:main
+      caramel_autorefresh = caramel.scripts.autorefresh:main
       """,
       )

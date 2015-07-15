@@ -1,0 +1,16 @@
+[Unit]
+Description=Caramel Autorefresh DAemon
+
+[Service]
+User=admin.caramel.modio.se
+Group=admin.caramel.modio.se
+ExecStart=/srv/caramel.modio.se/autorefresh
+WorkingDirectory=/srv/caramel.modio.se/
+
+PrivateTmp=true
+Type=simple
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
