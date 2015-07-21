@@ -25,6 +25,11 @@ from pyramid.view import view_config
 from hashlib import sha256
 from datetime import datetime
 
+try:
+    from ipaddress import ip_address
+except ImportError:
+    from ipaddr import IPAddress as ip_address
+
 from .models import (
     CSR,
     AccessLog,
@@ -121,8 +126,12 @@ def cert_fetch(request):
         csr = CSR.by_sha256sum(sha256sum)
     except NoResultFound:
         raise HTTPNotFound
+    try:
+        ip_addr = str(ip_address(request.client_addr))
+    except ValueError:
+        raise HTTPBadRequest("Invalid Remote Address")
     # XXX: Exceptions? remote_addr or client_addr?
-    AccessLog(csr, request.remote_addr).save()
+    AccessLog(csr, ip_addr).save()
     if csr.rejected:
         raise HTTPForbidden
     if csr.certificates:

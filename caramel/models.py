@@ -236,7 +236,7 @@ class AccessLog(Base):
     when = _sa.Column(_sa.DateTime, default=_datetime.datetime.utcnow)
     # XXX: name could be better, could perhaps be limited length,
     #      might not want this nullable
-    addr = _sa.Column(_sa.Text)
+    addr = _sa.Column(_sa.Text(convert_unicode=True))
     csr_id = _fkcolumn(CSR.id, nullable=False)
 
     def __init__(self, csr, addr):

@@ -125,8 +125,8 @@ class TestCertFetch(ModelTestCase):
     def setUp(self):
         super(TestCertFetch, self).setUp()
         self.config = testing.setUp()
-        self.req = testing.DummyRequest()
-        self.req.remote_addr = "test"
+        self.req = testing.DummyRequest(client_addr="127.0.0.1")
+        self.req.remote_addr = self.req.client_addr
         # TODO: ...
 
     def tearDown(self):
@@ -141,6 +141,13 @@ class TestCertFetch(ModelTestCase):
             views.cert_fetch(self.req)
         self.assertEqual(accesses, len(AccessLog.all()))
 
+    def test_invalid_client_addr(self):
+        sha256sum = fixtures.CSRData.initial.sha256sum
+        self.req.matchdict["sha256"] = sha256sum
+        self.req.client_addr = "localhost"
+        with self.assertRaises(HTTPBadRequest):
+            views.cert_fetch(self.req)
+
     def test_exists_valid(self):
         sha256sum = fixtures.CSRData.initial.sha256sum
         csr = CSR.by_sha256sum(sha256sum)
@@ -152,7 +159,7 @@ class TestCertFetch(ModelTestCase):
         self.assertEqual(resp.body, csr.certificates[0].pem)
         self.assertEqual(self.req.response.status_int, 200)
         # Verify there's a new AccessLog entry
-        self.assertEqual(csr.accessed[0].addr, self.req.remote_addr)
+        self.assertEqual(csr.accessed[0].addr, self.req.client_addr)
         self.assertAlmostEqual(csr.accessed[0].when, now,
                                delta=datetime.timedelta(seconds=1))
 
@@ -166,7 +173,7 @@ class TestCertFetch(ModelTestCase):
         self.assertIs(resp, csr)
         self.assertEqual(self.req.response.status_int, 202)
         # Verify there's a new AccessLog entry
-        self.assertEqual(csr.accessed[0].addr, self.req.remote_addr)
+        self.assertEqual(csr.accessed[0].addr, self.req.client_addr)
         self.assertAlmostEqual(csr.accessed[0].when, now,
                                delta=datetime.timedelta(seconds=1))
 
@@ -180,7 +187,7 @@ class TestCertFetch(ModelTestCase):
         self.assertIs(resp, csr)
         self.assertEqual(self.req.response.status_int, 202)
         # Verify there's a new AccessLog entry
-        self.assertEqual(csr.accessed[0].addr, self.req.remote_addr)
+        self.assertEqual(csr.accessed[0].addr, self.req.client_addr)
         self.assertAlmostEqual(csr.accessed[0].when, now,
                                delta=datetime.timedelta(seconds=1))
         pass

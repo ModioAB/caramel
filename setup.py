@@ -20,13 +20,19 @@ requires = [
     "python-dateutil",
     ]
 
+try:
+    import ipaddress
+except ImportError:
+    requires.append("ipaddr>=2")
+del ipaddress
+
 deplinks = [
     "http://hg.saddi.com/flup-py3.0/archive/cc23b715b120.tar.gz" +
     "#egg=flup-1.0.4.dev",
     ]
 
 setup(name="caramel",
-      version="1.0",
+      version="1.2",
       description="caramel",
       long_description=README + "\n\n" + CHANGES,
       classifiers=[
