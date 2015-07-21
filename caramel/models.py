@@ -282,7 +282,7 @@ class Certificate(Base):
 
     def __init__(self, CSR, pem,  *args, **kws):
         self.pem = pem
-        self.csr_id = CSR.id
+        self.csr = CSR
 
         req = CSR.req
         cert_pkey = self.cert.get_pubkey()
