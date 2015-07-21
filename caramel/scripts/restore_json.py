@@ -30,8 +30,8 @@ def main():
     args = cmdline()
     env = bootstrap(args.inifile)
 
-    settings, closer = env['registry'].settings, env['closer']
-    engine = create_engine(settings['sqlalchemy.url'])
+    settings, closer = env["registry"].settings, env["closer"]
+    engine = create_engine(settings["sqlalchemy.url"])
     models.init_session(engine)
 
     data = json.load(sys.stdin)
@@ -39,9 +39,10 @@ def main():
 
     with transaction.manager:
         for obj in data:
-            print(".", end='')
-            csr = models.CSR(obj['sha256sum'], obj['pem'])
-            csr.rejected = obj['rejected']
+            sys.stdout.write(".")
+            sys.stdout.flush()
+            csr = models.CSR(obj["sha256sum"], obj["pem"])
+            csr.rejected = obj["rejected"]
             csr.certificates = [models.Certificate(csr, pem)
                                 for pem in obj["certificates"]]
             csr.accessed = [logify(csr, x) for x in reversed(obj["accessed"])]
