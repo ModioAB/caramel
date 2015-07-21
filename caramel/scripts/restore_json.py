@@ -49,4 +49,5 @@ def main():
             csr.save()
         print("\nTransaction finalizing.")
     closer()
+    engine.dispose()
     sys.exit(0)

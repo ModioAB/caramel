@@ -192,10 +192,15 @@ def main():
     if life_short > life_long:
         error_out("Short lived certs ({0}) shouldn't last longer "
                   "than long lived certs ({1})".format(life_short, life_long))
+
+    def quit():
+        closer()
+        engine.dispose()
+        sys.exit(0)
+
     if args.list:
         print_list()
-        closer()
-        sys.exit(0)
+        quit()
 
     if args.reject:
         csr_reject(args.reject)
@@ -219,3 +224,4 @@ def main():
 
     if args.refresh:
         csr_resign(ca_key, ca_cert, life_short, life_long, settings_backdate)
+    quit()

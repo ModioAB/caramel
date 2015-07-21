@@ -50,4 +50,5 @@ def main():
 
     print(json.dumps(out, sort_keys=True, indent=2))
     closer()
+    engine.dispose()
     sys.exit(0)
