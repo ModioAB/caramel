@@ -75,7 +75,7 @@ class CSRFixture(AttributeCollection, SimilarityComparable):
 
     @defaultproperty
     def sha256sum(self):
-        return sha256(self.pem).hexdigest()
+        return sha256(self.pem.encode('ascii')).hexdigest()
 
     def match(self, other):
         if not super(CSRFixture, self).match(other):
@@ -152,7 +152,7 @@ class CertificateData(object):
             n4rH2rFn8rcQwSaRyE9NcOpirCur43MR42+LAfZq5s9j7CuQJTw6G0wvCHGqRIQ9
             X1qbQOxg6ig=
             -----END CERTIFICATE-----
-            """).encode("utf8"),
+            """),
         )
 
     expired = CertificateFixture(
@@ -185,7 +185,7 @@ class CertificateData(object):
             7CRL6mRM5+q4ICfesXzUXpPYjgD2UexIjSJNoYjiu3aKpjwvrZ88t8hPR46Uac7E
             5yvm61Agw/Tg
             -----END CERTIFICATE-----
-            """).encode("utf8"),
+            """),
         )
 
     ca_cert = CertificateFixture(
@@ -239,7 +239,7 @@ class CertificateData(object):
             EybN1zenahQmhX4ljI5OSMYBP3gpkRu2HvP5SOwN28QHq2+mgCFxzdfdtiWoJ8a0
             7eLmmg==
             -----END CERTIFICATE-----
-            """).encode("utf8"),
+            """),
         )
     # FIXME: add more certificates here, once we have something to test.
 
@@ -277,7 +277,7 @@ class CSRData(object):
             O+jruZshnFL0KQybIokYGLLcb6NixdsCTSw+rfztuLUEEMP1ozNCgk8TX8mXWduM
             XIP49FHFe6IjLuj0ofRXiJPmS+4ToqRbNIBRoz7kSLov
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),  # py3 dedent can't handle bytes
+            """),  # py3 dedent can't handle bytes
         subject_components=(
             ('O', 'Example inc.'),
             ('OU', 'Example Dept'),
@@ -312,7 +312,7 @@ class CSRData(object):
             oQN1HuxKCScUJ9Vtr0dnBLGAf62vAqv5yZYhl9Qnt5EJ9OtspWm0e8FwTjNmoA/z
             qnvUxskzM2ItxVV9oa9YDTid0GbJvF67QJQyVIO0Vz4uwg==
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),  # py3 dedent can't handle bytes
+            """),  # py3 dedent can't handle bytes
         subject_components=(
             ('O', 'Example inc.'),
             ('OU', 'Example Dept'),
@@ -343,7 +343,7 @@ class CSRData(object):
             MN1FxWzEy4yXgzW8uv+lX6yyTtkfrC7e3LFiAuoUlBeD5GmsVd30Xz5iGnuQv3d0
             fekjT5Np8XIS2ERJmx4CIjs5VpE1FMNOMoJ35kQpkQaQ
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),
+            """),
         subject_components=(
             ('O', 'Example inc.'),
             ('OU', 'Example Dept'),
@@ -361,7 +361,7 @@ class CSRData(object):
             BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
             faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),
+            """),
         )
 
     truncated = CSRFixture(
@@ -371,7 +371,7 @@ class CSRData(object):
             YW1wbGUgRGVwdDEYMBYGA1UEAwwPYmFyLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
             AQEBBQADSwAwSAJBAKk2sD6xi/gfO3TVnoGMhUmkPDD17/qYzEvDdw/kponLTdNF
             asGx1//giKSBqBpUFt+KTz3NofK9Pf2qWWDxyUECAwEAAaAAMA0GCSqGSIb3DQEB
-            """).encode("utf8"),
+            """),
         )
 
     trailing_content = CSRFixture(
@@ -388,7 +388,7 @@ class CSRData(object):
             bar
             baz
             quux
-            """).encode("utf8"),
+            """),
         )
 
     leading_content = CSRFixture(
@@ -405,7 +405,7 @@ class CSRData(object):
             BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
             faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),
+            """),
         )
 
     multi_request = CSRFixture(
@@ -426,7 +426,7 @@ class CSRData(object):
             BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
             faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),
+            """),
         )
 
     not_pem = CSRFixture(
@@ -441,10 +441,10 @@ class CSRData(object):
             Spam, Spam, Spam, Egg and Spam
             Spam, Spam, Spam, Spam, Spam, Spam, Baked Beans,
                 Spam, Spam, Spam and Spam
-            """).encode("utf8"),
+            """),
         )
 
-    empty = CSRFixture(pem=b"")
+    empty = CSRFixture(pem="")
 
     bad_sha = CSRFixture(good, sha256sum=not_pem.sha256sum)
 
@@ -460,7 +460,7 @@ class CSRData(object):
             SIb3DQEBBQUAA0EAhriivXQYFbdc8QrnDjwVCX8ZGXiGKQEC66LceWDdvOy+mDu8
             gi+L6IgnptU8VmEowAPp0veIH1MWJrnGdp7M0g==
             -----END CERTIFICATE REQUEST-----
-        """).encode("utf-8"),
+        """),
         subject_components=(
             ("O", "Example inc."),
             ("OU", "Example test dept."),
@@ -469,5 +469,5 @@ class CSRData(object):
         )
 
     large_body = CSRFixture(
-        pem="".join(("foobar", "x" * views._MAXLEN)).encode("utf-8"),
+        pem="".join(("foobar", "x" * views._MAXLEN))
         )

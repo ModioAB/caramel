@@ -91,11 +91,13 @@ def HTTPErrorToJson(exc, request):
 def csr_add(request):
     # XXX: do length check in middleware? server?
     raise_for_length(request)
-    sha256sum = sha256(request.body).hexdigest()
+    # We expect the body to be ascii, cast it to bytes for hashing.
+    pem = request.text.encode('ascii')
+    sha256sum = sha256(pem).hexdigest()
     if sha256sum != request.matchdict["sha256"]:
         raise HTTPBadRequest("hash mismatch ({0})".format(sha256sum))
     try:
-        csr = CSR(sha256sum, request.body)
+        csr = CSR(sha256sum, request.text)
     except ValueError as err:
         raise HTTPBadRequest("crypto error: {0}".format(err))
 

@@ -29,6 +29,7 @@ from pyramid.decorator import reify as _reify
 import datetime as _datetime
 import dateutil.parser as _dateutil_parser
 import uuid as _uuid
+from hashlib import sha256 as _sha256
 
 
 X509_V3 = 0x2  # RFC 2459, 4.1.2.1
@@ -113,8 +114,8 @@ _SHA256_LEN = 64
 class CSR(Base):
     sha256sum = _sa.Column(_sa.CHAR(_SHA256_LEN), unique=True, nullable=False)
     pem = _sa.Column(_sa.Text, nullable=False)
-    orgunit = _sa.Column(_sa.String(_UB_OU_LEN))
-    commonname = _sa.Column(_sa.String(_UB_CN_LEN))
+    orgunit = _sa.Column(_sa.String(_UB_OU_LEN, convert_unicode=True))
+    commonname = _sa.Column(_sa.String(_UB_CN_LEN, convert_unicode=True))
     rejected = _sa.Column(_sa.Boolean(create_constraint=True))
     accessed = _orm.relationship("AccessLog", backref="csr",
                                  order_by="AccessLog.when.desc()")
@@ -127,22 +128,29 @@ class CSR(Base):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
         self.sha256sum = sha256sum
         self.pem = reqtext
-        # FIXME: Below 4 lines (try/except) are duped in the req() function.
         try:
-            self.req.verify(self.req.get_pubkey())
+            pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM,
+                                                   self.req)
         except _crypto.Error:
-            raise ValueError("invalid PEM reqtext")
+            raise ValueError("PEM parsing error")
+
+        if not _sha256(pem).hexdigest() == self.sha256sum:
+            raise ValueError("Checksum mismatch after PEM roundtrip")
         # Check for and reject reqtext with trailing content
-        pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, self.req)
-        if pem != self.pem:
-            raise ValueError("invalid PEM reqtext")
+        if pem.decode("ascii") != self.pem:
+            raise ValueError("Invalid PEM reqtext")
         self.orgunit = self.subject.OU
         self.commonname = self.subject.CN
         self.rejected = False
 
     @_reify
     def req(self):
-        req = _crypto.load_certificate_request(_crypto.FILETYPE_PEM, self.pem)
+        try:
+            pem = self.pem.encode("ascii")
+        except (AttributeError, UnicodeEncodeError):
+            raise ValueError("Invalid PEM data")
+
+        req = _crypto.load_certificate_request(_crypto.FILETYPE_PEM, pem)
         try:
             req.verify(req.get_pubkey())
         except _crypto.Error:
@@ -292,7 +300,8 @@ class Certificate(Base):
 
     @_reify
     def cert(self):
-        cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, self.pem)
+        cert = _crypto.load_certificate(_crypto.FILETYPE_PEM,
+                                        self.pem.encode('ascii'))
 
         extensions = {}
         for index in range(0, cert.get_extension_count()):
@@ -383,5 +392,6 @@ class Certificate(Base):
         cert.add_extensions(extensions)
         bits = cert.get_pubkey().bits()
         cert.sign(sign_key, HASH[bits])
-        pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
+        pem = (_crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
+               .decode('ascii'))
         return cls(CSR=CSR, pem=pem)

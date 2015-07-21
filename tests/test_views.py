@@ -37,8 +37,8 @@ from caramel import views
 
 
 def dummypost(fix, **args):
-    req = testing.DummyRequest(**args)
-    req.body = fix.pem
+    req = testing.DummyRequest(text=fix.pem, **args)
+    req.body = fix.pem.encode('ascii')
     req.content_length = len(req.body)
     req.matchdict["sha256"] = fix.sha256sum
     req.registry.settings['ca.cert'] = 'abc123.crt'
@@ -156,7 +156,7 @@ class TestCertFetch(ModelTestCase):
         resp = views.cert_fetch(self.req)
         # Verify response contents
         self.assertIsInstance(resp, Response)
-        self.assertEqual(resp.body, csr.certificates[0].pem)
+        self.assertEqual(resp.text, csr.certificates[0].pem)
         self.assertEqual(self.req.response.status_int, 200)
         # Verify there's a new AccessLog entry
         self.assertEqual(csr.accessed[0].addr, self.req.client_addr)
