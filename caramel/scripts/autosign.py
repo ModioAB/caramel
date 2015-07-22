@@ -1,4 +1,5 @@
 #!/bin/env python3
+# vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 """The caramel auto-signer daemon.
 This isn't necessary a _good_ idea, but it's part of examples of how
@@ -39,26 +40,27 @@ import caramel.models as models
 logger = logging.getLogger(__name__)
 
 
-def csr_sign(csr, key, cert, delta):
+def csr_sign(sha256sum, key, cert, delta):
     """Signs a CSR and saves it in a transaction.
     Transaction so we won't have racing with the database.
     Also validates that it's a UUID for commonname."""
 
-    # Could have been by us, or before
-    if csr.rejected:
-        return
-
-    try:
-        uuid.UUID(csr.commonname)
-    except ValueError:
-        # not a valid uuid. Just ignore
-        return
-
     with transaction.manager:
-        cert = models.Certificate.sign(csr, key, cert, delta)
+        csr = models.CSR.by_sha256sum(sha256sum)
+        # Could have been by us, or before
+        if csr.rejected:
+            return
+
+        try:
+            uuid.UUID(csr.commonname)
+        except ValueError:
+            # not a valid uuid. Just ignore
+            return
+
         logger.info("Signing: {0} valid for {1}".format(csr.commonname, delta))
+        cert = models.Certificate.sign(csr, key, cert, delta)
         cert.save()
-    return
+        return
 
 
 def mainloop(delay, key, cert, delta):
@@ -68,10 +70,9 @@ def mainloop(delay, key, cert, delta):
         while True:
             csrs = models.CSR.unsigned()
             futures = [executor.submit(csr_sign,
-                                       csr,
+                                       csr.sha256sum,
                                        key, cert, delta)
                        for csr in csrs]
-
             time.sleep(delay)
             for future in concurrent.futures.as_completed(futures):
                 try:

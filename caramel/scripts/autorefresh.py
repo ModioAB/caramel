@@ -1,4 +1,5 @@
 #!/bin/env python3
+# vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 """The caramel auto-refresh daemon.
 Automatically refreshes certificates, needs access to private key for the CA.
@@ -22,11 +23,24 @@ import caramel.models as models
 logger = logging.getLogger(__name__)
 
 
-def csr_refresh(csr, before, after, settings):
+def actual_refresh(sha256sum, new_lifetime, backdate, ca_key, ca_cert):
+    """Takes a transaction to fetch out the objects and refresh,
+    so it works in threaded environments"""
+    with transaction.manager:
+        csr = models.CSR.by_sha256sum(sha256sum)
+
+        if csr.rejected:
+            return
+        logger.info("Refreshing {} with lifetime {}, backdate={}"
+                    .format(csr, new_lifetime, backdate))
+        cert = models.Certificate.sign(csr, ca_key, ca_cert,
+                                       new_lifetime, backdate)
+        cert.save()
+
+
+def refresh(sha256sum, before, after, settings):
     """ Refreshes a CSR if need be"""
     now = datetime.datetime.utcnow()
-    if csr.rejected:
-        return
 
     # backdating is ugly, cap it.
     lifetime = min(after - before, settings["long"])
@@ -42,16 +56,10 @@ def csr_refresh(csr, before, after, settings):
         new_lifetime = settings["long"]
         backdate = settings["backdate"]
     else:
-        backdate = False
         new_lifetime = settings["short"]
+        backdate = False
 
-    with transaction.manager:
-        logger.info("Refreshing {} with lifetime {}, backdate={}"
-                    .format(csr, new_lifetime, backdate))
-
-        cert = models.Certificate.sign(csr, ca_key, ca_cert,
-                                       new_lifetime, backdate)
-        cert.save()
+    actual_refresh(sha256sum, new_lifetime, backdate, ca_key, ca_cert)
     return
 
 
@@ -67,8 +75,8 @@ def mainloop(delay, settings):
                 if csr.id not in lifetimes:
                     continue
                 before, after = lifetimes[csr.id]
-                future = executor.submit(csr_refresh,
-                                         csr, before, after, settings)
+                future = executor.submit(refresh, csr.sha256sum,
+                                         before, after, settings)
                 futures.append(future)
 
             for future in concurrent.futures.as_completed(futures):

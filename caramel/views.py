@@ -136,8 +136,8 @@ def cert_fetch(request):
     AccessLog(csr, ip_addr).save()
     if csr.rejected:
         raise HTTPForbidden
-    if csr.certificates:
-        cert = csr.certificates[0]
+    cert = csr.certificates.first()
+    if cert:
         if datetime.utcnow() < cert.not_after:
             # XXX: appropriate content-type is ... ?
             return Response(cert.pem,

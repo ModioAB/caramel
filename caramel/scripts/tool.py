@@ -1,4 +1,5 @@
 #!/bin/env python3
+# vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 import argparse
 
@@ -10,6 +11,9 @@ import transaction
 import datetime
 import sys
 import concurrent.futures
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def cmdline():
@@ -54,11 +58,11 @@ def error_out(message):
 def print_list():
     requests = models.CSR.valid()
     for csr in requests:
-        if csr.certificates:
-            cert = csr.certificates[0]
-            not_after = str(cert.not_after)
-        else:
-            not_after = "----------"
+        last = csr.certificates.first()
+        not_after = "----------"
+
+        if last:
+            not_after = str(last.not_after)
         output = " ".join((str(csr.id), csr.commonname, csr.sha256sum,
                            not_after))
         # TODO: Add lifetime of latest (fetched?) cert for the key.
@@ -96,15 +100,15 @@ def csr_reject(number):
 
 def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
     with transaction.manager:
-        CSR = models.CSR.query().get(number)
-        if not CSR:
+        csr = models.CSR.query().get(number)
+        if not csr:
             error_out("ID not found")
-        if CSR.rejected:
+        if csr.rejected:
             error_out("Refusing to sign rejected ID")
 
-        if CSR.certificates:
+        cert = csr.certificates.first()
+        if cert:
             today = datetime.datetime.utcnow()
-            cert = CSR.certificates[0]
             cur_lifetime = cert.not_after - cert.not_before
             # Cert hasn't expired, and currently has longer lifetime
             if (cert.not_after > today) and (cur_lifetime > timedelta):
@@ -115,37 +119,44 @@ def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
                        "The old certificate is still out there.")
                 error_out(msg.format(cur_lifetime, timedelta))
 
-        cert = models.Certificate.sign(CSR, ca_key, ca_cert,
+        cert = models.Certificate.sign(csr, ca_key, ca_cert,
                                        timedelta, backdate)
         cert.save()
 
 
-def refresh(csr, ca_key, ca_cert, lifetime, backdate):
-    print("Refreshing {} with lifetime: {}, backdate: {}"
-          .format(csr, lifetime, backdate))
-
+def refresh(sha256sum, ca_key, ca_cert, lifetime, backdate):
     with transaction.manager:
+        csr = models.CSR.by_sha256sum(sha256sum)
+        print("Refreshing {} with lifetime: {}, backdate: {}"
+              .format(csr, lifetime, backdate))
+
         cert = models.Certificate.sign(csr, ca_key, ca_cert,
                                        lifetime, backdate)
         cert.save()
 
 
 def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
-    csrlist = models.CSR.valid()
-    lifetimes = models.CSR.most_recent_lifetime()
     now = datetime.datetime.utcnow()
     futures = []
+    candidates = 0
+    unsigned = 0
+    fresh = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+
+        csrlist = models.CSR.valid()
+        lifetimes = models.CSR.most_recent_lifetime()
         for csr in csrlist:
             if csr.id not in lifetimes:
+                unsigned += 1
                 continue
-
             before, after = lifetimes[csr.id]
             lifetime = min(after - before, lifetime_long)
             half_life = lifetime / 2
 
             if now < after - half_life:
+                fresh += 1
                 continue
+            candidates += 1
 
             if lifetime >= lifetime_long:
                 new_lifetime = lifetime_long
@@ -155,19 +166,33 @@ def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
                 new_backdate = False
 
             promise = executor.submit(refresh,
-                                      csr, ca_key, ca_cert,
+                                      csr.sha256sum, ca_key, ca_cert,
                                       new_lifetime, new_backdate)
             futures.append(promise)
+
+        success = 0
+        failure = 0
         for future in concurrent.futures.as_completed(futures):
             try:
                 future.result()
-            except Exception:
-                print("Future failed")
+            except Exception as e:
+                logger.error("Signing task failed: {}".format(e))
+                failure += 1
+            else:
+                success = 1
+
+        print("Unsigned: {}, fresh: {}"
+              .format(unsigned, fresh))
+        print("Total candidates: {}, succesful: {}, failed: {}"
+              .format(candidates, success, failure))
 
 
 def main():
     args = cmdline()
     env = bootstrap(args.inifile)
+
+    logger.setLevel(logging.DEBUG)
+    logging.config.fileConfig(args.inifile)
 
     settings, closer = env['registry'].settings, env['closer']
     engine = create_engine(settings['sqlalchemy.url'])
