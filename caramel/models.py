@@ -217,7 +217,7 @@ class CSR(Base):
 
     @classmethod
     def unsigned(cls):
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select([Certificate.csr_id]).distinct()
         return cls.query().filter_by(rejected=False).\
             filter(CSR.id.notin_(all_signed)).all()
 
