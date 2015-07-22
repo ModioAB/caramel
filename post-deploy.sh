@@ -21,7 +21,7 @@ scl enable python33 "virtualenv-3.3 $venv"
 # Virtual env population & install
 scl enable python33 "bash -c \
 'source \"${venv}/bin/activate\";\
- cd \"${HERE}\"; python setup.py install;'"
+ cd \"${HERE}\"; python setup.py install;pip install psycopg2;'"
 
 /sbin/restorecon -vR "$venv"
 echo "Setting permissions"
