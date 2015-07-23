@@ -96,6 +96,15 @@ def csr_add(request):
     sha256sum = sha256(pem).hexdigest()
     if sha256sum != request.matchdict["sha256"]:
         raise HTTPBadRequest("hash mismatch ({0})".format(sha256sum))
+
+    # Postgres logs failed inserts, sacrifice a roundtrip to avoid errors
+    try:
+        CSR.by_sha256sum(sha256sum)
+    except NoResultFound:
+        pass
+    else:
+        raise HTTPBadRequest("Already submitted")
+
     try:
         csr = CSR(sha256sum, request.text)
     except ValueError as err:
