@@ -170,7 +170,7 @@ class CSR(Base):
 
     @classmethod
     def valid(cls):
-        return cls.query().filter_by(rejected=False)
+        return cls.query().filter_by(rejected=False).yield_per(100)
 
     @classmethod
     def stale(cls, expiration_date):
@@ -179,7 +179,7 @@ class CSR(Base):
                 .distinct()
                 .filter(Certificate.not_after < expiration_date))
 
-        return cls.valid().filter(CSR.id.in_(subq))
+        return cls.valid().filter(CSR.id.in_(subq)).yield_per(100)
 
     @classmethod
     def most_recent_lifetime(cls):
@@ -200,7 +200,8 @@ class CSR(Base):
                                  Certificate.not_before,
                                  Certificate.not_after)
                  .join(subs, and_(Certificate.csr_id == subs.columns.csr_id,
-                                  Certificate.not_after == subs.columns.max)))
+                                  Certificate.not_after == subs.columns.max))
+                 .yield_per(100))
 
         # We have to do filtering in code, as SQLite can't compare DateTimes
         # .filter((Certificate.lifetime * percentage) >
