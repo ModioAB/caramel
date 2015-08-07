@@ -51,10 +51,10 @@ _crypto_patch()
 def get_ca_prefix(ca_cert, subj_match=CA_SUBJ_MATCH):
     cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, ca_cert)
     subject = cert.get_subject()
-    components = subject.get_components()
-    matches = tuple((n.decode("utf8"), v.decode("utf8"))
-                    for n, v in components
-                    if n in subj_match)
+    components = dict(subject.get_components())
+    matches = tuple((n.decode("utf8"), components[n].decode("utf8"))
+                    for n in subj_match
+                    if n in components)
     return matches
 
 
