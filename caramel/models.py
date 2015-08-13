@@ -65,6 +65,11 @@ class SigningCert(object):
 
         return cls(cert, key)
 
+    @_reify
+    def pem(self):
+        return _crypto.dump_certificate(_crypto.FILETYPE_PEM, self.cert)
+
+    # Returns the parts we _care_ about in the subject, from a ca
     def get_ca_prefix(self, subj_match=CA_SUBJ_MATCH):
         components = self.cert.get_subject().get_components()
         matches = tuple((n.decode("utf8"), v.decode("utf8"))

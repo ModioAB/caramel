@@ -128,3 +128,19 @@ def cert_fetch(request):
                             charset="UTF-8")
     request.response.status_int = 202
     return csr
+
+
+@view_config(route_name="ca", request_method="GET",
+             renderer="string", http_cache=3600)
+def ca_fetch(request):
+    ca_file = request.registry.settings['ca.cert']
+    ca = SigningCert.from_files(ca_file)
+    return ca.pem
+
+
+@view_config(route_name="cabundle", request_method="GET",
+             renderer="string", http_cache=3600)
+def ca_bundle_fetch(request):
+    """Attempt to return a bunle of all our intermediates"""
+    bundle = ca_fetch(request)
+    return bundle
