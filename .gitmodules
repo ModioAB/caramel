@@ -1,0 +1,3 @@
+[submodule "js-request-certificate/forge"]
+	path = js-request-certificate/forge
+	url = git@github.com:digitalbazaar/forge.git
