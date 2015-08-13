@@ -39,6 +39,8 @@ from sqlalchemy.orm.exc import NoResultFound
 #      server), or at least be configurable.
 _MAXLEN = 2 * 2**10
 
+_CORS_HEADERS = {"Access-Control-Allow-Origin": "*"}
+
 
 # Helper that opens the file.
 def _get_ca_prefix(filename):
@@ -90,27 +92,32 @@ def csr_add(request):
     raise_for_length(request)
     sha256sum = sha256(request.body).hexdigest()
     if sha256sum != request.matchdict["sha256"]:
-        raise HTTPBadRequest("hash mismatch ({0})".format(sha256sum))
+        raise HTTPBadRequest("hash mismatch ({0})".format(sha256sum),
+                             headers=_CORS_HEADERS)
     try:
         csr = CSR(sha256sum, request.body)
     except ValueError as err:
-        raise HTTPBadRequest("crypto error: {0}".format(err))
+        raise HTTPBadRequest("crypto error: {0}".format(err),
+                             headers=_CORS_HEADERS)
 
     # XXX: figure out what to verify in subject, and how
     CA_PREFIX = _get_ca_prefix(request.registry.settings['ca.cert'])
     try:
         raise_for_subject(csr.subject_components, CA_PREFIX)
     except ValueError as err:
-        raise HTTPBadRequest("Bad subject: {0}".format(err))
+        raise HTTPBadRequest("Bad subject: {0}".format(err),
+                             headers=_CORS_HEADERS)
 
     # XXX: store things in DB
     try:
         csr.save()
     except IntegrityError:
         # XXX: is this what we want here?
-        raise HTTPBadRequest("duplicate request")
+        raise HTTPBadRequest("duplicate request",
+                             headers=_CORS_HEADERS)
     # We've accepted the signing request, but there's been no signing yet
     request.response.status_int = 202
+    request.response.headers.update(_CORS_HEADERS)
     # JSON-rendered data (client could calculate this itself, and often will)
     return csr
 
@@ -122,17 +129,20 @@ def cert_fetch(request):
     try:
         csr = CSR.by_sha256sum(sha256sum)
     except NoResultFound:
-        raise HTTPNotFound
+        raise HTTPNotFound(headers=_CORS_HEADERS)
     # XXX: Exceptions? remote_addr or client_addr?
     AccessLog(csr, request.remote_addr).save()
     if csr.rejected:
-        raise HTTPForbidden
+        raise HTTPForbidden(headers=_CORS_HEADERS)
     if csr.certificates:
         cert = csr.certificates[0]
         if datetime.utcnow() < cert.not_after:
             # XXX: appropriate content-type is ... ?
-            return Response(cert.pem,
-                            content_type="application/octet-stream",
-                            charset="UTF-8")
+            response = Response(cert.pem,
+                                content_type="application/octet-stream",
+                                charset="UTF-8")
+            response.headers.update(_CORS_HEADERS)
+            return response
     request.response.status_int = 202
+    request.response.headers.update(_CORS_HEADERS)
     return csr
