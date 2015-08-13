@@ -8,7 +8,6 @@ from pyramid.settings import asbool
 from sqlalchemy import create_engine
 from dateutil.relativedelta import relativedelta
 import caramel.models as models
-import caramel.signing as signing
 import transaction
 import datetime
 import sys
@@ -127,7 +126,7 @@ def main():
         keyname = settings["ca.key"]
     except KeyError:
         error_out("config file needs ca.cert and ca.key properly set")
-    ca = signing.SigningCert.from_files(certname, keyname)
+    ca = models.SigningCert.from_files(certname, keyname)
     if args.sign and args.refresh:
         error_out("Only refresh or sign, not both")
 
