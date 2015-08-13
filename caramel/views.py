@@ -28,7 +28,7 @@ from datetime import datetime
 from .models import (
     CSR,
     AccessLog,
-    get_ca_prefix,
+    SigningCert,
     )
 
 from sqlalchemy.exc import IntegrityError
@@ -39,13 +39,6 @@ from sqlalchemy.orm.exc import NoResultFound
 # XXX: This should probably be handled outside of app (i.e. by the
 #      server), or at least be configurable.
 _MAXLEN = 2 * 2**10
-
-
-# Helper that opens the file.
-def _get_ca_prefix(filename):
-    with open(filename, 'rt') as f:
-        ca_cert = f.read()
-    return get_ca_prefix(ca_cert)
 
 
 def raise_for_length(req, limit=_MAXLEN):
@@ -95,7 +88,8 @@ def csr_add(request):
         raise HTTPBadRequest("crypto error: {0}".format(err))
 
     # Verify the parts of the subject we care about
-    CA_PREFIX = _get_ca_prefix(request.registry.settings['ca.cert'])
+    ca = SigningCert.from_files(request.registry.settings["ca.cert"])
+    CA_PREFIX = ca.get_ca_prefix()
     try:
         raise_for_subject(csr.subject_components, CA_PREFIX)
     except ValueError as err:

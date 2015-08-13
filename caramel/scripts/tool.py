@@ -1,4 +1,5 @@
 #!/bin/env python
+# vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 import argparse
 
@@ -7,6 +8,7 @@ from pyramid.settings import asbool
 from sqlalchemy import create_engine
 from dateutil.relativedelta import relativedelta
 import caramel.models as models
+import caramel.signing as signing
 import transaction
 import datetime
 import sys
@@ -66,7 +68,7 @@ def csr_reject(number):
         CSR.save()
 
 
-def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
+def csr_sign(number, ca, timedelta, backdate):
     with transaction.manager:
         CSR = models.CSR.query().get(number)
         if not CSR:
@@ -74,12 +76,11 @@ def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
         if CSR.rejected:
             error_out("Refusing to sign rejected ID")
 
-        cert = models.Certificate.sign(CSR, ca_key, ca_cert,
-                                       timedelta, backdate)
+        cert = models.Certificate.sign(CSR, ca, timedelta, backdate)
         cert.save()
 
 
-def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
+def csr_resign(ca, lifetime_short, lifetime_long, backdate):
     with transaction.manager:
         try:
             csrlist = models.CSR.valid()
@@ -94,12 +95,11 @@ def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
 
             # XXX: In a backdated cert, this is almost always true.
             if old_lifetime >= lifetime_long:
-                cert = models.Certificate.sign(csr, ca_key, ca_cert,
+                cert = models.Certificate.sign(csr, ca,
                                                lifetime_long, backdate)
             else:
                 # Never backdate short-lived certs
-                cert = models.Certificate.sign(csr, ca_key, ca_cert,
-                                               lifetime_short, False)
+                cert = models.Certificate.sign(csr, ca, lifetime_short, False)
             cert.save()
 
 
@@ -123,14 +123,11 @@ def main():
         sys.exit(0)
 
     try:
-        with open(settings['ca.cert'], 'rt') as f:
-            ca_cert = f.read()
-
-        with open(settings['ca.key'], 'rt') as f:
-            ca_key = f.read()
+        certname = settings["ca.cert"]
+        keyname = settings["ca.key"]
     except KeyError:
         error_out("config file needs ca.cert and ca.key properly set")
-
+    ca = signing.SigningCert.from_files(certname, keyname)
     if args.sign and args.refresh:
         error_out("Only refresh or sign, not both")
 
@@ -149,11 +146,10 @@ def main():
 
     if args.sign:
         if args.long:
-            csr_sign(args.sign, ca_key, ca_cert,
-                     life_long, settings_backdate)
+            csr_sign(args.sign, ca, life_long, settings_backdate)
         else:
             # Never backdate short lived certs
-            csr_sign(args.sign, ca_key, ca_cert, life_short, False)
+            csr_sign(args.sign, ca, life_short, False)
 
     if args.refresh:
-        csr_resign(ca_key, ca_cert, life_short, life_long, settings_backdate)
+        csr_resign(ca, life_short, life_long, settings_backdate)

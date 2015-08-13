@@ -47,15 +47,30 @@ def _crypto_patch():
 _crypto_patch()
 
 
-# Returns the parts we _care_ about in the subject, from a ca file
-def get_ca_prefix(ca_cert, subj_match=CA_SUBJ_MATCH):
-    cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, ca_cert)
-    subject = cert.get_subject()
-    components = subject.get_components()
-    matches = tuple((n.decode("utf8"), v.decode("utf8"))
-                    for n, v in components
-                    if n in subj_match)
-    return matches
+class SigningCert(object):
+    """Data class to wrap signing key + cert, to help refactoring"""
+    def __init__(self, cert, key=None):
+        if key:
+            self.key = _crypto.load_privatekey(_crypto.FILETYPE_PEM, key)
+        self.cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, cert)
+
+    @classmethod
+    def from_files(cls, certfile, keyfile=None):
+        key = None
+        if keyfile:
+            with open(keyfile, 'rt') as f:
+                key = f.read()
+        with open(certfile, 'rt') as f:
+            cert = f.read()
+
+        return cls(cert, key)
+
+    def get_ca_prefix(self, subj_match=CA_SUBJ_MATCH):
+        components = self.cert.get_subject().get_components()
+        matches = tuple((n.decode("utf8"), v.decode("utf8"))
+                        for n, v in components
+                        if n in subj_match)
+        return matches
 
 
 # XXX: probably error prone for cases where things are specified by string
@@ -265,7 +280,7 @@ class Certificate(Base):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
 
     @classmethod
-    def sign(cls, CSR, ca_key, ca_cert, lifetime=_datetime.timedelta(30*3),
+    def sign(cls, CSR, ca, lifetime=_datetime.timedelta(30*3),
              backdate=False):
         """Takes a CSR, signs it, generating and returning a Certificate.
         backdate causes the CA to set "notBefore" of signed certificates to
@@ -273,23 +288,19 @@ class Certificate(Base):
         timekeeping bug in some firmware.
         """
         notAfter = int(lifetime.total_seconds())
-        # Transform "raw" PEM text to usable objects
-        sign_key = _crypto.load_privatekey(_crypto.FILETYPE_PEM, ca_key)
-        sign_cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, ca_cert)
-        del ca_cert, ca_key
 
         # TODO: Verify that the data in DB matches csr_add rules in views.py
 
         cert = _crypto.X509()
         cert.set_subject(CSR.req.get_subject())
         cert.set_serial_number(int(uuid.uuid1()))
-        cert.set_issuer(sign_cert.get_subject())
+        cert.set_issuer(ca.cert.get_subject())
         cert.set_pubkey(CSR.req.get_pubkey())
         cert.set_version(X509_V3)
         cert.gmtime_adj_notBefore(0)
         cert.gmtime_adj_notAfter(notAfter)
         if backdate:
-            before = sign_cert.get_notBefore()
+            before = ca.cert.get_notBefore()
             if before:
                 cert.set_notBefore(before)
             del before
@@ -316,10 +327,10 @@ class Certificate(Base):
             _crypto.X509Extension(b"authorityKeyIdentifier",
                                   critical=False,
                                   value=b"issuer:always,keyid:always",
-                                  issuer=sign_cert)
+                                  issuer=ca.cert)
         ]
         cert.add_extensions(extensions)
         bits = cert.get_pubkey().bits()
-        cert.sign(sign_key, HASH[bits])
+        cert.sign(ca.key, HASH[bits])
         pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
         return cls(CSR=CSR, pem=pem)
