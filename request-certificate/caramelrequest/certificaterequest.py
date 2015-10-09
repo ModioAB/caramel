@@ -7,9 +7,53 @@ import os
 import subprocess
 import sys
 import time
+import tempfile
 from xml.etree import ElementTree as ET
 
 import requests
+
+OPENSSL_CNF = b"""
+# This definition stops the following lines choking if HOME isn't
+# defined.
+HOME            = .
+RANDFILE        = $ENV::HOME/.rnd
+####################################################################
+[ req ]
+default_bits        = 2048
+default_md      = sha256
+default_keyfile     = privkey.pem
+distinguished_name  = req_distinguished_name
+attributes      = req_attributes
+x509_extensions = v3_req    # The extentions to add to the self signed cert
+string_mask = utf8only
+
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+
+
+[ req_distinguished_name ]
+countryName         = Country Name (2 letter code)
+countryName_default     = AU
+countryName_min         = 2
+countryName_max         = 2
+stateOrProvinceName     = State or Province Name (full name)
+stateOrProvinceName_default = Some-State
+localityName            = Locality Name (eg, city)
+0.organizationName      = Organization Name (eg, company)
+0.organizationName_default  = Internet Widgits Pty Ltd
+organizationalUnitName      = Organizational Unit Name (eg, section)
+commonName          = Common Name (e.g. server FQDN or YOUR name)
+commonName_max          = 64
+emailAddress            = Email Address
+emailAddress_max        = 64
+
+[ req_attributes ]
+challengePassword       = A challenge password
+challengePassword_min       = 4
+challengePassword_max       = 20
+unstructuredName        = An optional company name
+"""
 
 
 class CertificateRequestException(Exception):
@@ -129,14 +173,18 @@ class CertificateRequest(object):
                           'using it').format(self.csr_file_name))
             have_csr = True
         if not have_csr:
-            result = call_silent('openssl',
-                                 'req',
-                                 '-sha256',
-                                 '-utf8',
-                                 '-new',
-                                 '-key', self.key_file_name,
-                                 '-out', self.csr_file_name,
-                                 '-subj', subject)
+            with tempfile.NamedTemporaryFile() as cnf:
+                cnf.write(OPENSSL_CNF)
+                cnf.flush()
+                result = call_silent('openssl',
+                                     'req',
+                                     '-config', cnf.name,
+                                     '-sha256',
+                                     '-utf8',
+                                     '-new',
+                                     '-key', self.key_file_name,
+                                     '-out', self.csr_file_name,
+                                     '-subj', subject)
             if result != 0:
                 logging.error('Failed to create certificate signing request!')
                 raise CertificateRequestException()
