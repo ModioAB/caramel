@@ -115,7 +115,8 @@ class CSR(Base):
                                  order_by="AccessLog.when.desc()")
     certificates = _orm.relationship("Certificate", backref="csr",
                                      order_by="Certificate.not_after.desc()",
-                                     lazy="subquery")
+                                     lazy="subquery",
+                                     cascade="all, delete-orphan")
 
     def __init__(self, sha256sum, reqtext):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
