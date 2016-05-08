@@ -22,7 +22,7 @@ deplinks = [
     ]
 
 setup(name="caramel",
-      version="1.2",
+      version="1.4.0",
       description="caramel",
       long_description=README + "\n\n" + CHANGES,
       classifiers=[
