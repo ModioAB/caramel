@@ -1,4 +1,5 @@
 #!/bin/env python3
+# vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 import argparse
 
@@ -67,7 +68,7 @@ def print_list():
 
 
 def calc_lifetime(lifetime=relativedelta(hours=24)):
-    now = datetime.datetime.now()
+    now = datetime.datetime.utcnow()
     future = now + lifetime
     return future - now
 
@@ -101,7 +102,7 @@ def csr_reject(number):
         CSR.save()
 
 
-def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
+def csr_sign(number, ca, timedelta, backdate):
     with transaction.manager:
         CSR = models.CSR.query().get(number)
         if not CSR:
@@ -110,7 +111,7 @@ def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
             error_out("Refusing to sign rejected ID")
 
         if CSR.certificates:
-            today = datetime.datetime.now()
+            today = datetime.datetime.utcnow()
             cert = CSR.certificates[0]
             cur_lifetime = cert.not_after - cert.not_before
             # Cert hasn't expired, and currently has longer lifetime
@@ -122,34 +123,31 @@ def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
                        "The old certificate is still out there.")
                 error_out(msg.format(cur_lifetime, timedelta))
 
-        cert = models.Certificate.sign(CSR, ca_key, ca_cert,
-                                       timedelta, backdate)
+        cert = models.Certificate.sign(CSR, ca, timedelta, backdate)
         cert.save()
 
 
-def refresh(csr, ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
+def refresh(csr, ca, lifetime_short, lifetime_long, backdate):
     last = csr.certificates[0]
     old_lifetime = last.not_after - last.not_before
     # XXX: In a backdated cert, this is almost always true.
     if old_lifetime >= lifetime_long:
-        cert = models.Certificate.sign(csr, ca_key, ca_cert,
-                                       lifetime_long, backdate)
+        cert = models.Certificate.sign(csr, ca, lifetime_long, backdate)
     else:
         # Never backdate short-lived certs
-        cert = models.Certificate.sign(csr, ca_key, ca_cert,
-                                       lifetime_short, False)
+        cert = models.Certificate.sign(csr, ca, lifetime_short, False)
     with transaction.manager:
         cert.save()
 
 
-def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
+def csr_resign(ca, lifetime_short, lifetime_long, backdate):
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         try:
             csrlist = models.CSR.refreshable()
         except:
             error_out("No CSR's found")
         futures = (executor.submit(refresh,
-                                   csr, ca_key, ca_cert,
+                                   csr, ca,
                                    lifetime_short, lifetime_long, backdate)
                    for csr in csrlist)
         for future in concurrent.futures.as_completed(futures):
@@ -174,13 +172,11 @@ def main():
     del _short, _long
 
     try:
-        with open(settings['ca.cert'], 'rt') as f:
-            ca_cert = f.read()
-
-        with open(settings['ca.key'], 'rt') as f:
-            ca_key = f.read()
+        certname = settings["ca.cert"]
+        keyname = settings["ca.key"]
     except KeyError:
         error_out("config file needs ca.cert and ca.key properly set")
+    ca = models.SigningCert.from_files(certname, keyname)
 
     if life_short > life_long:
         error_out("Short lived certs ({0}) shouldn't last longer "
@@ -204,11 +200,10 @@ def main():
 
     if args.sign:
         if args.long:
-            csr_sign(args.sign, ca_key, ca_cert,
-                     life_long, settings_backdate)
+            csr_sign(args.sign, ca, life_long, settings_backdate)
         else:
             # Never backdate short lived certs
-            csr_sign(args.sign, ca_key, ca_cert, life_short, False)
+            csr_sign(args.sign, ca, life_short, False)
 
     if args.refresh:
-        csr_resign(ca_key, ca_cert, life_short, life_long, settings_backdate)
+        csr_resign(ca, life_short, life_long, settings_backdate)

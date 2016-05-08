@@ -15,7 +15,7 @@ import unittest
 
 from caramel.models import (
     CSR,
-    get_ca_prefix,
+    SigningCert,
 )
 
 from . import fixtures, ModelTestCase
@@ -80,29 +80,35 @@ class TestGetCAPrefix(unittest.TestCase):
     def test_blank_file(self):
         import OpenSSL
         with self.assertRaises(OpenSSL.crypto.Error):
-            get_ca_prefix("")
+            SigningCert("")
 
     def test_valid_cert(self):
-        get_ca_prefix(fixtures.CertificateData.ca_cert.pem)
+        ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
+        ca.get_ca_prefix()
 
     def test_outdated_cert_should_work(self):
-        get_ca_prefix(fixtures.CertificateData.expired.pem)
+        ca = SigningCert(fixtures.CertificateData.expired.pem)
+        ca.get_ca_prefix()
 
     def test_empty_returns_from_empty_subject(self):
-        result = get_ca_prefix(fixtures.CertificateData.initial.pem)
+        ca = SigningCert(fixtures.CertificateData.initial.pem)
+        result = ca.get_ca_prefix()
         self.assertEqual((), result)
 
     def test_empty_returns_from_empty_selector(self):
-        result = get_ca_prefix(fixtures.CertificateData.ca_cert.pem, ())
+        ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
+        result = ca.get_ca_prefix(())
         self.assertEqual((), result)
 
     def test_valid_returns_from_default_subject(self):
-        r = get_ca_prefix(fixtures.CertificateData.ca_cert.pem)
+        ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
+        r = ca.get_ca_prefix()
         self.assertEqual(fixtures.CertificateData.ca_cert.common_subject, r)
 
     def test_only_CN_returns_from_CN_selector(self):
         CN_TUPLE = (('CN', 'Caramel Signing Certificate'),)
-        result = get_ca_prefix(fixtures.CertificateData.ca_cert.pem, (b'CN', ))
+        ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
+        result = ca.get_ca_prefix((b'CN', ))
         self.assertEqual(CN_TUPLE, result)
 
     def test_only_wanted_returns_from_selector(self):
@@ -110,5 +116,6 @@ class TestGetCAPrefix(unittest.TestCase):
                     ('L', 'Norrköping'),
                     ('OU', 'Muppar Teknik'))
         SELECTOR = (b'ST', b'L', b'OU')
-        result = get_ca_prefix(fixtures.CertificateData.ca_cert.pem, SELECTOR)
+        ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
+        result = ca.get_ca_prefix(SELECTOR)
         self.assertEqual(SELECTED, result)

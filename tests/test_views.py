@@ -50,14 +50,20 @@ class TestCSRAdd(ModelTestCase):
         super(TestCSRAdd, self).setUp()
         self.config = testing.setUp()
         # Store original
-        self._get_ca_prefix = views.get_ca_prefix
-        views._get_ca_prefix = unittest.mock.Mock()
-        views._get_ca_prefix.return_value = fixtures.subject_prefix
+        self._from_files = views.SigningCert.from_files
+
+        # mock instance that returns value
+        _mocking = unittest.mock.Mock()
+        _mocking.get_ca_prefix.return_value = fixtures.subject_prefix
+
+        # Mock the object initializer
+        views.SigningCert.from_files = unittest.mock.Mock()
+        views.SigningCert.from_files.return_value = _mocking
 
     def tearDown(self):
         super(TestCSRAdd, self).tearDown()
         testing.tearDown()
-        views.get_ca_prefix = self._get_ca_prefix
+        views.SigningCert.from_files = self._from_files
 
     def test_good(self):
         req = dummypost(fixtures.CSRData.good)
