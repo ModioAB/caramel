@@ -11,22 +11,18 @@ requires = [
     "SQLAlchemy",
     "transaction",
     "pyramid_tm",
-    # "pyramid_debugtoolbar",
     "zope.sqlalchemy",
     "waitress",
     "cryptography>=0.5.dev1",
     "pyOpenSSL>=0.14",
-    "flup<=1.0.4.dev",
     "python-dateutil",
     ]
 
 deplinks = [
-    "http://hg.saddi.com/flup-py3.0/archive/cc23b715b120.tar.gz" +
-    "#egg=flup-1.0.4.dev",
     ]
 
 setup(name="caramel",
-      version="1.0",
+      version="1.2",
       description="caramel",
       long_description=README + "\n\n" + CHANGES,
       classifiers=[
@@ -38,7 +34,7 @@ setup(name="caramel",
       author="D.S. Ljungmark",
       author_email="spider@modio.se",
       url="https://github.com/MyTemp/caramel",
-      keywords="web wsgi bfg pylons pyramid certificates x509 ca cert",
+      keywords="web wsgi bfg pylons pyramid certificates x509 ca cert ssl tls",
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
