@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/bin/env python3
 
 import argparse
 
@@ -10,6 +10,7 @@ import caramel.models as models
 import transaction
 import datetime
 import sys
+import concurrent.futures
 
 
 def cmdline():
@@ -92,28 +93,36 @@ def csr_sign(number, ca_key, ca_cert, timedelta, backdate):
         cert.save()
 
 
-def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
+def refresh(csr, ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
+    last = csr.certificates[0]
+    old_lifetime = last.not_after - last.not_before
+    # XXX: In a backdated cert, this is almost always true.
+    if old_lifetime >= lifetime_long:
+        cert = models.Certificate.sign(csr, ca_key, ca_cert,
+                                       lifetime_long, backdate)
+    else:
+        # Never backdate short-lived certs
+        cert = models.Certificate.sign(csr, ca_key, ca_cert,
+                                       lifetime_short, False)
     with transaction.manager:
+        cert.save()
+
+
+def csr_resign(ca_key, ca_cert, lifetime_short, lifetime_long, backdate):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         try:
-            csrlist = models.CSR.valid()
+            csrlist = models.CSR.refreshable()
         except:
             error_out("No CSR's found")
-
-        for csr in csrlist:
-            if not csr.certificates:
-                continue
-            last = csr.certificates[0]
-            old_lifetime = last.not_after - last.not_before
-
-            # XXX: In a backdated cert, this is almost always true.
-            if old_lifetime >= lifetime_long:
-                cert = models.Certificate.sign(csr, ca_key, ca_cert,
-                                               lifetime_long, backdate)
-            else:
-                # Never backdate short-lived certs
-                cert = models.Certificate.sign(csr, ca_key, ca_cert,
-                                               lifetime_short, False)
-            cert.save()
+        futures = (executor.submit(refresh,
+                                   csr, ca_key, ca_cert,
+                                   lifetime_short, lifetime_long, backdate)
+                   for csr in csrlist)
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception:
+                print("Future failed")
 
 
 def main():
