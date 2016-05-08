@@ -48,5 +48,6 @@ setup(name="caramel",
       caramel_initialize_db = caramel.scripts.initializedb:main
       caramel_tool = caramel.scripts.tool:main
       caramel_ca = caramel.scripts.generate_ca:main
+      caramel_autosign = caramel.scripts.autosign:main
       """,
       )
