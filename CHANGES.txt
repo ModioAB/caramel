@@ -1,3 +1,16 @@
+1.6
+---
+
+- Adding root ca to public api
+- Adding bundle ca to public api (not quite present)
+
+1.4
+---
+
+- Autosign daemon
+- subjectAltName extension added to signed certs
+- refresh improvements
+
 1.0
 ---
 
