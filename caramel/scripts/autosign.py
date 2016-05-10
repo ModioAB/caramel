@@ -39,7 +39,7 @@ import caramel.models as models
 logger = logging.getLogger(__name__)
 
 
-def csr_sign(csr, key, cert, delta):
+def csr_sign(csr, ca, delta):
     """Signs a CSR and saves it in a transaction.
     Transaction so we won't have racing with the database.
     Also validates that it's a UUID for commonname."""
@@ -55,20 +55,18 @@ def csr_sign(csr, key, cert, delta):
         return
 
     with transaction.manager:
-        cert = models.Certificate.sign(csr, key, cert, delta)
+        cert = models.Certificate.sign(csr, ca, delta)
         cert.save()
     return
 
 
-def mainloop(delay, key, cert, delta):
+def mainloop(delay, ca, delta):
     """Concurrent-enabled mainloop.
     Spins forever and signs all certificates that come in"""
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         while True:
             csrs = models.CSR.unsigned()
-            futures = [executor.submit(csr_sign,
-                                       csr,
-                                       key, cert, delta)
+            futures = [executor.submit(csr_sign, csr, ca, delta)
                        for csr in csrs]
 
             time.sleep(delay)
@@ -112,15 +110,12 @@ def main():
     del valid
 
     try:
-        with open(settings['ca.cert'], 'rt') as f:
-            cert = f.read()
-        with open(settings['ca.key'], 'rt') as f:
-            key = f.read()
+        certname = settings["ca.cert"]
+        keyname = settings["ca.key"]
     except KeyError:
-        error_out("config file lacks ca.cert or ca.key", closer)
-    except OSError:
-        error_out("Key or cert not found", closer)
-    mainloop(delay, key, cert, delta)
+        error_out("config file needs ca.cert and ca.key properly set", closer)
+    ca = models.SigningCert.from_files(certname, keyname)
+    mainloop(delay, ca, delta)
 
 
 if __name__ == "__main__":

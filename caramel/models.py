@@ -314,6 +314,7 @@ class Certificate(Base):
         match that of the CA Certificate. This is an ugly workaround for a
         timekeeping bug in some firmware.
         """
+        assert isinstance(ca, SigningCert)
         notAfter = int(lifetime.total_seconds())
         # TODO: Verify that the data in DB matches csr_add rules in views.py
 
