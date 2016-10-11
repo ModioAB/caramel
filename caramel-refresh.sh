@@ -73,13 +73,28 @@ renew () {
     then
         PEM="$3"
         KEY=${CSR/.csr/.key}
-        test -s "$PEM" || (failure "$PEM: found in config but missing" && return 1)
-        test -s "$KEY" || (failure "$PEM: Found but $KEY missing" && return 1)
+        if [ ! -s "$PEM" ]; then
+            failure "$PEM: found in config but missing"
+            return 0
+        fi
+        if [ ! -s "$KEY" ]; then
+            failure "$PEM: Found but $KEY missing"
+            return 0
+        fi
     fi
 
-    test -z $CSR && (failure "Each line in the config is: csr filename;cert filename;pem filename" && return 1)
-    test -s "$CSR" || (failure "$CSR: invalid file match in config" && return 1)
-    test -s "$CRT" || (failure "$CRT: needs to exist." && return 1)
+    if [ -z "$CSR" ]; then
+        failure "Each line in the config is: csr filename;cert filename;pem filename"
+        return 0
+    fi
+    if [ ! -s "$CSR" ]; then
+        failure "$CSR: invalid file match in config"
+        return 0
+    fi
+    if [ ! -s "$CRT" ]; then
+        failure "$CRT: needs to exist."
+        return 0
+    fi
 
     # Expansion done below, otherwise you get fun time debugging.
     IFS=$'\n\ '
