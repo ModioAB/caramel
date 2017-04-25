@@ -10,6 +10,7 @@ requires = [
     "cryptography>=0.5.dev1",
     "pyOpenSSL>=0.14",
     "python-dateutil",
+    "idna",
     ]
 
 deplinks = [

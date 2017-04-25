@@ -4,9 +4,6 @@
 # Make things as three-ish as possible (requires python >= 2.6)
 from __future__ import (unicode_literals, print_function,
                         absolute_import, division)
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
 #
 # ----- End header -----
 #
@@ -17,6 +14,7 @@ from sqlalchemy.ext.declarative import (
     declared_attr as _declared_attr,
     )
 import sqlalchemy.orm as _orm
+from sqlalchemy.ext.hybrid import hybrid_property
 from zope.sqlalchemy import ZopeTransactionExtension as _ZTE
 
 import OpenSSL.crypto as _crypto
@@ -24,6 +22,12 @@ from pyramid.decorator import reify as _reify
 import datetime as _datetime
 import dateutil.parser
 import uuid
+import enum
+import ipaddress
+import idna
+
+# Namespace cleanup
+del unicode_literals, print_function, absolute_import, division
 
 
 X509_V3 = 0x2  # RFC 2459, 4.1.2.1
@@ -78,6 +82,17 @@ class SigningCert(object):
                         for n in subj_match
                         if n in components)
         return matches
+
+
+class SubjectAltNameKinds(enum.Enum):
+    """Declares the common standard types as an Enum
+        https://www.openssl.org/docs/manmaster/man5/x509v3_config.html#Subject-Alternative-Name
+        https://tools.ietf.org/html/rfc5280#section-4.2.1.6"""
+
+    email = 0
+    DNS = 1
+    IP = 2
+    URI = 3
 
 
 # XXX: probably error prone for cases where things are specified by string
@@ -142,6 +157,7 @@ class CSR(Base):
                                      order_by="Certificate.not_after.desc()",
                                      lazy="subquery",
                                      cascade="all, delete-orphan")
+    x509_sans = _orm.relationship("SubjectAltName", backref="csr")
 
     def __init__(self, sha256sum, reqtext):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
@@ -159,6 +175,10 @@ class CSR(Base):
         self.orgunit = self.subject.OU
         self.commonname = self.subject.CN
         self.rejected = False
+        # Create a SAN extension for our CommonName
+        san = SubjectAltName(SubjectAltNameKinds.DNS, self.subject.CN)
+        self.x509_sans.append(san)
+        DBSession.add(san)
 
     @_reify
     def req(self):
@@ -238,6 +258,143 @@ class AccessLog(Base):
 
     def __repr__(self):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
+
+
+class SubjectAltName(Base):
+        """https://tools.ietf.org/html/rfc5280#section-4.2.1.6 has plenty of
+        validation rules"""
+        csr_id = _fkcolumn(CSR.id, nullable=False)
+        _kind = _sa.Column('kind', _sa.Enum(SubjectAltNameKinds),
+                           nullable=False)
+        _value = _sa.Column('value', _sa.String(_UB_CN_LEN), nullable=False)
+        __table_args__ = (
+            _sa.UniqueConstraint('csr_id', 'kind', 'value',
+                                 name='no_duplicates'),
+        )
+
+        def __init__(self, kind, value):
+            self.kind = kind
+            self.value = value
+
+        @classmethod
+        def _pass(cls, value):
+            print("passing %r", value)
+            return value
+
+        @classmethod
+        def get_converter(cls, typ):
+            converters = {
+                    SubjectAltNameKinds.email: cls._pass,
+                    SubjectAltNameKinds.URI: cls._pass,
+                    SubjectAltNameKinds.IP: cls.convert_ip,
+                    SubjectAltNameKinds.DNS: cls.convert_dns,
+            }
+            return converters[typ]
+
+        @classmethod
+        def get_normaliser(cls, typ):
+            normalisers = {
+                    SubjectAltNameKinds.email: cls.normalise_email,
+                    SubjectAltNameKinds.DNS: cls.normalise_dns,
+                    SubjectAltNameKinds.IP: cls.normalise_ip,
+                    SubjectAltNameKinds.URI: cls.normalise_uri,
+            }
+            return normalisers[typ]
+
+        @hybrid_property
+        def kind(self):
+            """Getter, returns blindly from database"""
+            return self._kind
+
+        @kind.setter
+        def kind(self, kind):
+            """ Data validation on write. We don't do all kinds of values."""
+            OK_KINDS = {SubjectAltNameKinds.DNS, SubjectAltNameKinds.IP}
+            if kind not in OK_KINDS:
+                raise ValueError("Unexpected SubjectAltName kind")
+            self._kind = kind
+
+        @hybrid_property
+        def value(self):
+            """The database is a trust boundary, validate incoming data"""
+            normaliser = self.get_normaliser(self.kind)
+            converter = self.get_converter(self.kind)
+
+            val = normaliser(self._value)
+            return converter(val)
+
+        @value.setter
+        def value(self, value):
+            """Validate that our conversions work, but store human readable
+            value in DB"""
+            normaliser = self.get_normaliser(self.kind)
+            self._value = normaliser(value)
+
+        @staticmethod
+        def normalise_uri(uri):
+            raise NotImplementedError("We do not support URI type right now")
+
+        @staticmethod
+        def normalise_email(email):
+            raise NotImplementedError("We do not support email type right now")
+
+        @staticmethod
+        def normalise_ip(ip):
+            """The x509 specification has a bit to say about how it should be
+            stored. Fortunately, openssl does that lifting for us. """
+            # Raises ValueError if not a valid ip
+            _address = ipaddress.ip_address(ip)
+            if _address.is_multicast:
+                raise ValueError("We don't sign multicast")
+
+            # Allow reserved
+            if _address.is_reserved:
+                pass
+            # We allow link local, loopback, private, and public addresses.
+            return _address.compressed
+
+        @staticmethod
+        def convert_ip(ip):
+            """Convert it explicitly for formatting of other tools"""
+            _address = ipaddress.ip_address(ip)
+            return _address.exploded
+
+        @staticmethod
+        def normalise_dns(dns):
+            """The discussion from NSS is intersting, but dated
+            https://bugzilla.mozilla.org/show_bug.cgi?id=280839
+            For now, we trust that OpenSSL does the right thing(tm) and
+            punycodes/encodes as it should be...."""
+            if not isinstance(dns, str):
+                raise ValueError("We expect dns values to be unicode strings")
+            try:
+                # First round-trip through encode/decode to catch length
+                # errors, and to normalize the name according to DNS standards.
+                # (uts46=True means to normalize)
+                encoded = idna.encode(dns, uts46=True)
+                decoded = idna.decode(encoded)
+            except Exception as e:
+                raise ValueError("Failed to punycode %r" % dns) from e
+            return decoded
+
+        @staticmethod
+        def convert_dns(dns):
+            """The discussion from NSS is intersting, but dated
+            https://bugzilla.mozilla.org/show_bug.cgi?id=280839
+            For now, we trust that OpenSSL does the right thing(tm) and
+            punycodes/encodes as it should be...."""
+            return idna.encode(dns, uts46=True).decode("ascii")
+
+        def __repr__(self):
+            return "SubjectAltName({s.kind}, {s._value})".format(s=self)
+
+        def __str__(self):
+            """Print raw whats in the database"""
+            return "{s.kind.name}:{s._value}".format(s=self)
+
+        def __bytes__(self):
+            """Convert for consumption"""
+            return "{s.kind.name}:{s.value}".format(s=self).encode("ascii")
 
 
 class Extension(object):
@@ -335,7 +492,7 @@ class Certificate(Base):
                 cert.set_notBefore(before)
             del before
 
-        subjectAltName = bytes("DNS:" + CSR.commonname, 'utf-8')
+        subjectAltName = b','.join(bytes(san) for san in CSR.x509_sans)
         extensions = [
             _crypto.X509Extension(b'basicConstraints',
                                   critical=True,
