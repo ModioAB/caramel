@@ -4,9 +4,6 @@
 # Make things as three-ish as possible (requires python >= 2.6)
 from __future__ import (unicode_literals, print_function,
                         absolute_import, division)
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
 #
 # ----- End header -----
 #
@@ -17,6 +14,9 @@ from sqlalchemy import engine_from_config
 from .models import (
     init_session,
     )
+
+# Namespace cleanup
+del unicode_literals, print_function, absolute_import, division
 
 
 def main(global_config, **settings):

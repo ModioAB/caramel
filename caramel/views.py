@@ -4,9 +4,6 @@
 # Make things as three-ish as possible (requires python >= 2.6)
 from __future__ import (unicode_literals, print_function,
                         absolute_import, division)
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
 #
 # ----- End header -----
 #
@@ -33,6 +30,9 @@ from .models import (
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
+
+# Namespace cleanup
+del unicode_literals, print_function, absolute_import, division
 
 # Maximum length allowed for csr uploads.
 # 2 kbyte should be enough for up to 4 kbit keys.
