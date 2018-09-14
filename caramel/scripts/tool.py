@@ -115,9 +115,15 @@ def csr_clean(number):
         CSR = models.CSR.query().get(number)
         if not CSR:
             error_out("ID not found")
-        certs = sorted(CSR.certificates, key=lambda cert: cert.id)
+        certs = sorted(CSR.certificates, key=lambda cert: cert.not_after)
         CSR.certificates = [certs[-1]]
         CSR.save()
+
+
+def clean_all():
+    csrlist = models.CSR.refreshable()
+    for csr in csrlist:
+        csr_clean(csr.id)
 
 
 def csr_reject(number):
@@ -174,7 +180,7 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         try:
             csrlist = models.CSR.refreshable()
-        except:
+        except Exception:
             error_out("No CSR's found")
         futures = (
             executor.submit(
@@ -230,7 +236,7 @@ def main():
         error_out("Not implemented yet")
 
     if args.cleanall:
-        error_out("Not implemented yet")
+        clean_all()
 
     if args.sign:
         if args.long:
