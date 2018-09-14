@@ -1,3 +1,9 @@
+1.7
+---
+
+- Change data model from pem being Text to pem being Binary. There are no
+  automatic Migrations, so either dump & restore or revamp.
+
 1.6
 ---
 
