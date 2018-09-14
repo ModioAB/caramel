@@ -135,7 +135,7 @@ def cert_fetch(request):
 def ca_fetch(request):
     ca_file = request.registry.settings['ca.cert']
     ca = SigningCert.from_files(ca_file)
-    return ca.pem
+    return ca.pem.decode("utf8")
 
 
 @view_config(route_name="cabundle", request_method="GET",
