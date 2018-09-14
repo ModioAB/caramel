@@ -44,6 +44,7 @@ def _crypto_patch():
     about it."""
     _crypto._lib.ASN1_STRING_set_default_mask_asc(b'utf8only')
 
+
 _crypto_patch()
 
 
@@ -67,8 +68,7 @@ class SigningCert(object):
 
     @_reify
     def pem(self):
-        _bytes = _crypto.dump_certificate(_crypto.FILETYPE_PEM, self.cert)
-        return _bytes.decode('utf8')
+        return _crypto.dump_certificate(_crypto.FILETYPE_PEM, self.cert)
 
     # Returns the parts we _care_ about in the subject, from a ca
     def get_ca_prefix(self, subj_match=CA_SUBJ_MATCH):
@@ -84,6 +84,7 @@ class SigningCert(object):
 def _fkcolumn(referent, *args, **kwargs):
     refcol = referent.property.columns[0]
     return _sa.Column(refcol.type, _sa.ForeignKey(referent), *args, **kwargs)
+
 
 DBSession = _orm.scoped_session(_orm.sessionmaker(extension=_ZTE()))
 
@@ -107,6 +108,7 @@ class Base(object):
     def all(cls):
         return cls.query().all()
 
+
 # XXX: Newer versions of sqlalchemy have a decorator variant 'as_declarative'
 Base = _declarative_base(cls=Base)
 
@@ -119,6 +121,7 @@ def init_session(engine, create=False):
     else:
         Base.metadata.bind = engine
 
+
 # Upper bounds from RFC 5280
 _UB_CN_LEN = 64
 _UB_OU_LEN = 64
@@ -129,7 +132,7 @@ _SHA256_LEN = 64
 
 class CSR(Base):
     sha256sum = _sa.Column(_sa.CHAR(_SHA256_LEN), unique=True, nullable=False)
-    pem = _sa.Column(_sa.Text, nullable=False)
+    pem = _sa.Column(_sa.LargeBinary, nullable=False)
     orgunit = _sa.Column(_sa.String(_UB_OU_LEN))
     commonname = _sa.Column(_sa.String(_UB_CN_LEN))
     rejected = _sa.Column(_sa.Boolean(create_constraint=True))
@@ -252,7 +255,7 @@ class Extension(object):
 
 
 class Certificate(Base):
-    pem = _sa.Column(_sa.Text, nullable=False)
+    pem = _sa.Column(_sa.LargeBinary, nullable=False)
     # XXX: not_after might be enough
     not_before = _sa.Column(_sa.DateTime, nullable=False)
     not_after = _sa.Column(_sa.DateTime, nullable=False)

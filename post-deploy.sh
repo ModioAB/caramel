@@ -19,6 +19,8 @@ scl enable python33 "virtualenv-3.3 $venv"
 # Virtual env population & install
 scl enable python33 "bash -c \
 'source \"${venv}/bin/activate\";\
+'pip install -U pip';
+'pip install -U setuptools';
  cd \"${HERE}\"; python setup.py install;'"
 
 /sbin/restorecon -vR "$venv"
