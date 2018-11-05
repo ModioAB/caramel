@@ -57,9 +57,7 @@ def cmdline():
     bulk = parser.add_mutually_exclusive_group()
     bulk.add_argument(
         "--refresh",
-        help=(
-            "Sign all certificates previously " "signed certificates again."
-        ),
+        help="Sign all certificates that have a valid current signature.",
         action="store_true",
     )
 
@@ -101,22 +99,22 @@ def calc_lifetime(lifetime=relativedelta(hours=24)):
     return future - now
 
 
-def csr_wipe(number):
+def csr_wipe(csr_id):
     with transaction.manager:
-        CSR = models.CSR.query().get(number)
+        CSR = models.CSR.query().get(csr_id)
         if not CSR:
             error_out("ID not found")
         CSR.certificates = []
         CSR.save()
 
 
-def csr_clean(number):
+def csr_clean(csr_id):
     with transaction.manager:
-        CSR = models.CSR.query().get(number)
+        CSR = models.CSR.query().get(csr_id)
         if not CSR:
             error_out("ID not found")
         certs = sorted(CSR.certificates, key=lambda cert: cert.not_after)
-        CSR.certificates = [certs[-1]]
+        CSR.certificates = certs[-1:]
         CSR.save()
 
 
@@ -126,9 +124,9 @@ def clean_all():
         csr_clean(csr.id)
 
 
-def csr_reject(number):
+def csr_reject(csr_id):
     with transaction.manager:
-        CSR = models.CSR.query().get(number)
+        CSR = models.CSR.query().get(csr_id)
         if not CSR:
             error_out("ID not found")
 
@@ -136,9 +134,9 @@ def csr_reject(number):
         CSR.save()
 
 
-def csr_sign(number, ca, timedelta, backdate):
+def csr_sign(csr_id, ca, timedelta, backdate):
     with transaction.manager:
-        CSR = models.CSR.query().get(number)
+        CSR = models.CSR.query().get(csr_id)
         if not CSR:
             error_out("ID not found")
         if CSR.rejected:
@@ -181,7 +179,7 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
         try:
             csrlist = models.CSR.refreshable()
         except Exception:
-            error_out("No CSR's found")
+            error_out("Not found or some other error")
         futures = (
             executor.submit(
                 refresh, csr, ca, lifetime_short, lifetime_long, backdate
