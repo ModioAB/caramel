@@ -67,6 +67,13 @@ class SigningCert(object):
         return cls(cert, key)
 
     @_reify
+    def not_before(self):
+        ts = self.cert.get_notBefore()
+        if not ts:
+            return None
+        return dateutil.parser.parse(ts)
+
+    @_reify
     def pem(self):
         return _crypto.dump_certificate(_crypto.FILETYPE_PEM, self.cert)
 
@@ -329,11 +336,10 @@ class Certificate(Base):
         cert.set_version(X509_V3)
         cert.gmtime_adj_notBefore(0)
         cert.gmtime_adj_notAfter(notAfter)
-        if backdate:
-            before = ca.cert.get_notBefore()
-            if before:
-                cert.set_notBefore(before)
-            del before
+        if backdate and ca.not_before:
+            now = _datetime.datetime.now(tz=_datetime.timezone.utc)
+            delta = ca.not_before - now
+            cert.gmtime_adj_notBefore(int(delta.total_seconds()))
 
         subjectAltName = bytes("DNS:" + CSR.commonname, 'utf-8')
         extensions = [
