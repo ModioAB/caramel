@@ -80,6 +80,12 @@ def error_out(message):
 
 def print_list():
     requests = models.CSR.valid()
+
+    def unsigned_last(csr):
+        return (not csr.certificates, csr.id)
+
+    requests.sort(key=unsigned_last)
+
     for csr in requests:
         if csr.certificates:
             cert = csr.certificates[0]
