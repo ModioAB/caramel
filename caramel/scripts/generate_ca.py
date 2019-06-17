@@ -30,6 +30,7 @@ def _crypto_patch():
     about it."""
     _crypto._lib.ASN1_STRING_set_default_mask_asc(b'utf8only')
 
+
 _crypto_patch()
 
 

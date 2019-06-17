@@ -81,11 +81,10 @@ def error_out(message):
 def print_list():
     requests = models.CSR.valid()
     for csr in requests:
-        if csr.certificates:
-            cert = csr.certificates[0]
+        cert = csr.certificates.first()
+        not_after = "----------"
+        if cert:
             not_after = str(cert.not_after)
-        else:
-            not_after = "----------"
         output = " ".join(
             (str(csr.id), csr.commonname, csr.sha256sum, not_after)
         )
@@ -113,8 +112,8 @@ def csr_clean(csr_id):
         CSR = models.CSR.query().get(csr_id)
         if not CSR:
             error_out("ID not found")
-        certs = sorted(CSR.certificates, key=lambda cert: cert.not_after)
-        CSR.certificates = certs[-1:]
+        certs = [CSR.certificates.first()]
+        CSR.certificates = certs
         CSR.save()
 
 
@@ -142,9 +141,9 @@ def csr_sign(csr_id, ca, timedelta, backdate):
         if CSR.rejected:
             error_out("Refusing to sign rejected ID")
 
-        if CSR.certificates:
+        cert = CSR.certificates.first()
+        if cert:
             today = datetime.datetime.utcnow()
-            cert = CSR.certificates[0]
             cur_lifetime = cert.not_after - cert.not_before
             # Cert hasn't expired, and currently has longer lifetime
             if (cert.not_after > today) and (cur_lifetime > timedelta):
@@ -162,7 +161,7 @@ def csr_sign(csr_id, ca, timedelta, backdate):
 
 
 def refresh(csr, ca, lifetime_short, lifetime_long, backdate):
-    last = csr.certificates[0]
+    last = csr.certificates.first()
     old_lifetime = last.not_after - last.not_before
     # XXX: In a backdated cert, this is almost always true.
     if old_lifetime >= lifetime_long:
