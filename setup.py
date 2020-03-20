@@ -5,7 +5,7 @@ requires = [
     "SQLAlchemy >= 1.1",
     "transaction",
     "pyramid_tm",
-    "zope.sqlalchemy",
+    "zope.sqlalchemy >= 1.3",
     "waitress",
     "cryptography>=0.5.dev1",
     "pyOpenSSL>=0.14",

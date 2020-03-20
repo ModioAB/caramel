@@ -17,7 +17,7 @@ from sqlalchemy.ext.declarative import (
     declared_attr as _declared_attr,
     )
 import sqlalchemy.orm as _orm
-from zope.sqlalchemy import ZopeTransactionExtension as _ZTE
+from zope.sqlalchemy import register
 
 import OpenSSL.crypto as _crypto
 from pyramid.decorator import reify as _reify
@@ -93,7 +93,8 @@ def _fkcolumn(referent, *args, **kwargs):
     return _sa.Column(refcol.type, _sa.ForeignKey(referent), *args, **kwargs)
 
 
-DBSession = _orm.scoped_session(_orm.sessionmaker(extension=_ZTE()))
+DBSession = _orm.scoped_session(_orm.sessionmaker())
+register(DBSession)
 
 
 class Base(object):
