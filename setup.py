@@ -16,7 +16,7 @@ deplinks = [
     ]
 
 setup(name="caramel",
-      version="1.9.1",
+      version="1.9.2",
       description="caramel",
       long_description="""
 Caramel is a certificate management system that makes it easy to use client
