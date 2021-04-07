@@ -5,7 +5,7 @@ import argparse
 
 from pyramid.paster import bootstrap
 from pyramid.settings import asbool
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from dateutil.relativedelta import relativedelta
 import caramel.models as models
 import transaction
@@ -79,20 +79,29 @@ def error_out(message):
 
 
 def print_list():
-    requests = models.CSR.valid()
+    valid_requests = (
+        models.DBSession.query(
+            models.CSR.id,
+            models.CSR.commonname,
+            models.CSR.sha256sum,
+            func.max(models.Certificate.not_after),
+        )
+        .outerjoin(models.CSR.certificates)
+        .group_by(models.CSR.id)
+        .filter(models.CSR.rejected.is_(False))
+        .order_by(models.CSR.id)
+        .all()
+    )
 
     def unsigned_last(csr):
-        return (not csr.certificates, csr.id)
+        return (not csr[3], csr.id)
 
-    requests.sort(key=unsigned_last)
+    valid_requests.sort(key=unsigned_last)
 
-    for csr in requests:
-        cert = csr.certificates.first()
-        not_after = "----------"
-        if cert:
-            not_after = str(cert.not_after)
+    for csr_id, csr_commonname, csr_sha256sum, not_after in valid_requests:
+        not_after = "----------" if not_after is None else str(not_after)
         output = " ".join(
-            (str(csr.id), csr.commonname, csr.sha256sum, not_after)
+            (str(csr_id), csr_commonname, csr_sha256sum, not_after)
         )
         # TODO: Add lifetime of latest (fetched?) cert for the key.
         print(output)
