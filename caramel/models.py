@@ -188,6 +188,22 @@ class CSR(Base):
         return cls.query().filter_by(rejected=False).all()
 
     @classmethod
+    def list_csr_printable(cls):
+        return (
+            cls.query(
+                CSR.id,
+                CSR.commonname,
+                CSR.sha256sum,
+                _sa.func.max(Certificate.not_after),
+            )
+            .outerjoin(CSR.certificates)
+            .group_by(CSR.id)
+            .filter(CSR.rejected.is_(False))
+            .order_by(CSR.id)
+            .all()
+        )
+
+    @classmethod
     def refreshable(cls):
         """Using "valid" and looking at csr.certificates doesn't scale.
         Better to do it in the Query."""

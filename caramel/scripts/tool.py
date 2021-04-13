@@ -5,7 +5,7 @@ import argparse
 
 from pyramid.paster import bootstrap
 from pyramid.settings import asbool
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine
 from dateutil.relativedelta import relativedelta
 import caramel.models as models
 import transaction
@@ -79,19 +79,7 @@ def error_out(message):
 
 
 def print_list():
-    valid_requests = (
-        models.DBSession.query(
-            models.CSR.id,
-            models.CSR.commonname,
-            models.CSR.sha256sum,
-            func.max(models.Certificate.not_after),
-        )
-        .outerjoin(models.CSR.certificates)
-        .group_by(models.CSR.id)
-        .filter(models.CSR.rejected.is_(False))
-        .order_by(models.CSR.id)
-        .all()
-    )
+    valid_requests = models.CSR.list_csr_printable()
 
     def unsigned_last(csr):
         return (not csr[3], csr.id)
