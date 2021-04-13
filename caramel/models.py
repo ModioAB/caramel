@@ -1,21 +1,11 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
-# Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import (unicode_literals, print_function,
-                        absolute_import, division)
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
-#
-# ----- End header -----
-#
-
 import sqlalchemy as _sa
 from sqlalchemy.ext.declarative import (
     declarative_base as _declarative_base,
     declared_attr as _declared_attr,
-    )
+)
 import sqlalchemy.orm as _orm
 from zope.sqlalchemy import register
 
@@ -29,9 +19,7 @@ import uuid
 X509_V3 = 0x2  # RFC 2459, 4.1.2.1
 
 # Bitlength to Hash Strength lookup table.
-HASH = {1024: "sha1",
-        2048: "sha256",
-        4096: "sha512"}
+HASH = {1024: "sha1", 2048: "sha256", 4096: "sha512"}
 
 # These parts of the subject _must_ match our CA key
 CA_SUBJ_MATCH = (b"C", b"ST", b"L", b"O")
@@ -42,7 +30,7 @@ def _crypto_patch():
     https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
     https://github.com/pyca/pyopenssl/issues/129 is an open issue
     about it."""
-    _crypto._lib.ASN1_STRING_set_default_mask_asc(b'utf8only')
+    _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
 
 
 _crypto_patch()
@@ -50,6 +38,7 @@ _crypto_patch()
 
 class SigningCert(object):
     """Data class to wrap signing key + cert, to help refactoring"""
+
     def __init__(self, cert, key=None):
         if key:
             self.key = _crypto.load_privatekey(_crypto.FILETYPE_PEM, key)
@@ -59,9 +48,9 @@ class SigningCert(object):
     def from_files(cls, certfile, keyfile=None):
         key = None
         if keyfile:
-            with open(keyfile, 'rt') as f:
+            with open(keyfile, "rt") as f:
                 key = f.read()
-        with open(certfile, 'rt') as f:
+        with open(certfile, "rt") as f:
             cert = f.read()
 
         return cls(cert, key)
@@ -81,9 +70,11 @@ class SigningCert(object):
     def get_ca_prefix(self, subj_match=CA_SUBJ_MATCH):
         subject = self.cert.get_subject()
         components = dict(subject.get_components())
-        matches = tuple((n.decode("utf8"), components[n].decode("utf8"))
-                        for n in subj_match
-                        if n in components)
+        matches = tuple(
+            (n.decode("utf8"), components[n].decode("utf8"))
+            for n in subj_match
+            if n in components
+        )
         return matches
 
 
@@ -144,12 +135,16 @@ class CSR(Base):
     orgunit = _sa.Column(_sa.String(_UB_OU_LEN))
     commonname = _sa.Column(_sa.String(_UB_CN_LEN))
     rejected = _sa.Column(_sa.Boolean(create_constraint=True))
-    accessed = _orm.relationship("AccessLog", backref="csr",
-                                 order_by="AccessLog.when.desc()")
-    certificates = _orm.relationship("Certificate", backref="csr",
-                                     order_by="Certificate.not_after.desc()",
-                                     lazy="dynamic",
-                                     cascade="all, delete-orphan")
+    accessed = _orm.relationship(
+        "AccessLog", backref="csr", order_by="AccessLog.when.desc()"
+    )
+    certificates = _orm.relationship(
+        "Certificate",
+        backref="csr",
+        order_by="Certificate.not_after.desc()",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
 
     def __init__(self, sha256sum, reqtext):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
@@ -184,8 +179,9 @@ class CSR(Base):
     @_reify
     def subject_components(self):
         components = self.subject.get_components()
-        return tuple((n.decode("utf8"), v.decode("utf8"))
-                     for n, v in components)
+        return tuple(
+            (n.decode("utf8"), v.decode("utf8")) for n, v in components
+        )
 
     @classmethod
     def valid(cls):
@@ -199,15 +195,22 @@ class CSR(Base):
         # Options subqueryload is to prevent thousands of small queries and
         # instead batch load the certificates at once
         all_signed = _sa.select([Certificate.csr_id])
-        return cls.query().\
-            filter_by(rejected=False).\
-            filter(CSR.id.in_(all_signed)).all()
+        return (
+            cls.query()
+            .filter_by(rejected=False)
+            .filter(CSR.id.in_(all_signed))
+            .all()
+        )
 
     @classmethod
     def unsigned(cls):
         all_signed = _sa.select([Certificate.csr_id])
-        return cls.query().filter_by(rejected=False).\
-            filter(CSR.id.notin_(all_signed)).all()
+        return (
+            cls.query()
+            .filter_by(rejected=False)
+            .filter(CSR.id.notin_(all_signed))
+            .all()
+        )
 
     @classmethod
     def by_sha256sum(cls, sha256sum):
@@ -218,14 +221,18 @@ class CSR(Base):
         return dict(sha256=self.sha256sum, url=url)
 
     def __str__(self):
-        return ("<{0.__class__.__name__} "  # auto-concatenation (no comma)
-                "sha256sum={0.sha256sum:8.8}... "
-                "rejected: {0.rejected!r} "
-                "OU={0.orgunit!r} CN={0.commonname!r}>").format(self)
+        return (
+            "<{0.__class__.__name__} "  # auto-concatenation (no comma)
+            "sha256sum={0.sha256sum:8.8}... "
+            "rejected: {0.rejected!r} "
+            "OU={0.orgunit!r} CN={0.commonname!r}>"
+        ).format(self)
 
     def __repr__(self):
-        return ("<{0.__class__.__name__} id={0.id} "  # (no comma)
-                "sha256sum={0.sha256sum}>").format(self)
+        return (
+            "<{0.__class__.__name__} id={0.id} "  # (no comma)
+            "sha256sum={0.sha256sum}>"
+        ).format(self)
 
 
 class AccessLog(Base):
@@ -241,8 +248,10 @@ class AccessLog(Base):
         self.addr = addr
 
     def __str__(self):
-        return ("<{0.__class__.__name__} id={0.id} "
-                "csr={0.csr.sha256sum} when={0.when}>").format(self)
+        return (
+            "<{0.__class__.__name__} id={0.id} "
+            "csr={0.csr.sha256sum} when={0.when}>"
+        ).format(self)
 
     def __repr__(self):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
@@ -250,6 +259,7 @@ class AccessLog(Base):
 
 class Extension(object):
     """Convenience class to make validating Extensions a bit easier"""
+
     critical = False
     name = None
     data = None
@@ -269,7 +279,7 @@ class Certificate(Base):
     not_after = _sa.Column(_sa.DateTime, nullable=False)
     csr_id = _fkcolumn(CSR.id, nullable=False)
 
-    def __init__(self, CSR, pem,  *args, **kws):
+    def __init__(self, CSR, pem, *args, **kws):
         self.pem = pem
         self.csr_id = CSR.id
 
@@ -296,14 +306,14 @@ class Certificate(Base):
         if cert.get_version() != X509_V3:
             raise ValueError("Not a x509.v3 certificate")
 
-        ext = extensions.get(b'basicConstraints')
+        ext = extensions.get(b"basicConstraints")
         if not ext:
             raise ValueError("Missing Basic Constraints")
 
         if not ext.critical:
             raise ValueError("Extended Key Usage not critical")
 
-        ext = extensions.get(b'extendedKeyUsage')
+        ext = extensions.get(b"extendedKeyUsage")
         if not ext:
             raise ValueError("Missing Extended Key Usage extension")
         if not ext.critical:
@@ -318,8 +328,9 @@ class Certificate(Base):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
 
     @classmethod
-    def sign(cls, CSR, ca, lifetime=_datetime.timedelta(30*3),
-             backdate=False):
+    def sign(
+        cls, CSR, ca, lifetime=_datetime.timedelta(30 * 3), backdate=False
+    ):
         """Takes a CSR, signs it, generating and returning a Certificate.
         backdate causes the CA to set "notBefore" of signed certificates to
         match that of the CA Certificate. This is an ugly workaround for a
@@ -342,29 +353,35 @@ class Certificate(Base):
             delta = ca.not_before - now
             cert.gmtime_adj_notBefore(int(delta.total_seconds()))
 
-        subjectAltName = bytes("DNS:" + CSR.commonname, 'utf-8')
+        subjectAltName = bytes("DNS:" + CSR.commonname, "utf-8")
         extensions = [
-            _crypto.X509Extension(b'basicConstraints',
-                                  critical=True,
-                                  value=b'CA:FALSE'),
-            _crypto.X509Extension(b'extendedKeyUsage',
-                                  critical=True,
-                                  value=b'clientAuth,serverAuth'),
-            _crypto.X509Extension(b"subjectAltName",
-                                  critical=False,
-                                  value=subjectAltName),
-            _crypto.X509Extension(b"subjectKeyIdentifier",
-                                  critical=False,
-                                  value=b"hash",
-                                  subject=cert),
+            _crypto.X509Extension(
+                b"basicConstraints", critical=True, value=b"CA:FALSE"
+            ),
+            _crypto.X509Extension(
+                b"extendedKeyUsage",
+                critical=True,
+                value=b"clientAuth,serverAuth",
+            ),
+            _crypto.X509Extension(
+                b"subjectAltName", critical=False, value=subjectAltName
+            ),
+            _crypto.X509Extension(
+                b"subjectKeyIdentifier",
+                critical=False,
+                value=b"hash",
+                subject=cert,
+            ),
         ]
         cert.add_extensions(extensions)
         # subjectKeyIdentifier has to be present before adding auth ident
         extensions = [
-            _crypto.X509Extension(b"authorityKeyIdentifier",
-                                  critical=False,
-                                  value=b"issuer:always,keyid:always",
-                                  issuer=ca.cert)
+            _crypto.X509Extension(
+                b"authorityKeyIdentifier",
+                critical=False,
+                value=b"issuer:always,keyid:always",
+                issuer=ca.cert,
+            )
         ]
         cert.add_extensions(extensions)
         bits = cert.get_pubkey().bits()
