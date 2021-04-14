@@ -1,16 +1,6 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
-# Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import (unicode_literals, print_function,
-                        absolute_import, division)
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
-#
-# ----- End header -----
-#
-
 import unittest
 
 from caramel.models import (
@@ -70,7 +60,6 @@ class TestCSR(ModelTestCase):
 
 
 class TestGetCAPrefix(unittest.TestCase):
-
     def setUp(self):
         pass
 
@@ -79,6 +68,7 @@ class TestGetCAPrefix(unittest.TestCase):
 
     def test_blank_file(self):
         import OpenSSL
+
         with self.assertRaises(OpenSSL.crypto.Error):
             SigningCert("")
 
@@ -106,16 +96,18 @@ class TestGetCAPrefix(unittest.TestCase):
         self.assertEqual(fixtures.CertificateData.ca_cert.common_subject, r)
 
     def test_only_CN_returns_from_CN_selector(self):
-        CN_TUPLE = (('CN', 'Caramel Signing Certificate'),)
+        CN_TUPLE = (("CN", "Caramel Signing Certificate"),)
         ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
-        result = ca.get_ca_prefix((b'CN', ))
+        result = ca.get_ca_prefix((b"CN",))
         self.assertEqual(CN_TUPLE, result)
 
     def test_only_wanted_returns_from_selector(self):
-        SELECTED = (('ST', 'Östergötland'),
-                    ('L', 'Norrköping'),
-                    ('OU', 'Muppar Teknik'))
-        SELECTOR = (b'ST', b'L', b'OU')
+        SELECTED = (
+            ("ST", "Östergötland"),
+            ("L", "Norrköping"),
+            ("OU", "Muppar Teknik"),
+        )
+        SELECTOR = (b"ST", b"L", b"OU")
         ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
         result = ca.get_ca_prefix(SELECTOR)
         self.assertEqual(SELECTED, result)
