@@ -111,3 +111,33 @@ class TestGetCAPrefix(unittest.TestCase):
         ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
         result = ca.get_ca_prefix(SELECTOR)
         self.assertEqual(SELECTED, result)
+
+
+class TestQuery(ModelTestCase):
+    def test_list_items(self):
+        """initial is signed, good is unsigned"""
+        initial = fixtures.CSRData.initial
+        good = fixtures.CSRData.good()
+        good.save()
+        expected = [
+            (
+                1,
+                initial.commonname,
+                initial.sha256sum,
+                initial.certificates[-1].not_after,
+            ),
+            (2, good.commonname, good.sha256sum, None),
+        ]
+        self.assertEqual(CSR.list_csr_printable(), expected)
+
+    def test_refreshable(self):
+        """Good is not signed and should not be refreshable"""
+        fixtures.CSRData.good().save()
+        expected = [fixtures.CSRData.initial]
+        self.assertSimilarSequence(CSR.refreshable(), expected)
+
+    def test_unsigned(self):
+        """Good is not signed and should be the only one"""
+        good = fixtures.CSRData.good()
+        good.save()
+        self.assertSimilarSequence(CSR.unsigned(), [good])
