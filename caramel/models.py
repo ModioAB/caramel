@@ -190,7 +190,7 @@ class CSR(Base):
     @classmethod
     def list_csr_printable(cls):
         return (
-            cls.query(
+            DBSession.query(
                 CSR.id,
                 CSR.commonname,
                 CSR.sha256sum,
