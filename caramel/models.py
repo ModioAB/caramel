@@ -100,8 +100,10 @@ class Base(object):
         DBSession.flush()
 
     @classmethod
-    def query(cls):
-        return DBSession.query(cls)
+    def query(cls, *args, **kwargs):
+        if not args:
+            return DBSession.query(cls)
+        return DBSession.query(*args, **kwargs)
 
     @classmethod
     def all(cls):
