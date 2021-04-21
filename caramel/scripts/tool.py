@@ -3,6 +3,7 @@
 
 import argparse
 
+from caramel import config
 from pyramid.paster import bootstrap
 from pyramid.settings import asbool
 from sqlalchemy import create_engine
@@ -16,7 +17,7 @@ import concurrent.futures
 
 def cmdline():
     parser = argparse.ArgumentParser()
-    parser.add_argument("inifile")
+    config.add_inifile_argument(parser)
     parser.add_argument(
         "--long",
         help="Generate a long lived cert(1 year)",
@@ -68,7 +69,6 @@ def cmdline():
     )
 
     args = parser.parse_args()
-
     # Didn't find a way to do this with argparse, but I didn't look too hard.
     return args
 

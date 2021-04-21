@@ -7,6 +7,7 @@ import uuid
 import os
 import OpenSSL.crypto as _crypto
 from pyramid.paster import bootstrap
+from caramel import config
 
 VERSION = 0x2
 CA_BITS = 4096
@@ -162,7 +163,7 @@ def write_files(key, keyname, cert, certname):
 
 def cmdline():
     parser = argparse.ArgumentParser()
-    parser.add_argument("inifile", help="Needed to find CA filename")
+    config.add_inifile_argument(parser)
     args = parser.parse_args()
     return args
 
