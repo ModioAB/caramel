@@ -4,7 +4,9 @@ import argparse
 import os
 
 
-def add_inifile_argument(parser, env=os.environ):
+def add_inifile_argument(parser, env=None):
+    if env is None:
+        env = os.environ
     default_ini = env.get("CARAMEL_INI")
 
     parser.add_argument(
@@ -13,11 +15,11 @@ def add_inifile_argument(parser, env=os.environ):
         dest="inifile",
         default=default_ini,
         type=str,
-        action=check_inifile_path_set,
+        action=CheckInifilePathSet,
     )
 
 
-class check_inifile_path_set(argparse.Action):
+class CheckInifilePathSet(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, values)
         inifile = getattr(namespace, self.dest, None)
