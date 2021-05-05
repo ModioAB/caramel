@@ -179,9 +179,7 @@ class CSR(Base):
     @_reify
     def subject_components(self):
         components = self.subject.get_components()
-        return tuple(
-            (n.decode("utf8"), v.decode("utf8")) for n, v in components
-        )
+        return tuple((n.decode("utf8"), v.decode("utf8")) for n, v in components)
 
     @classmethod
     def valid(cls):
@@ -212,10 +210,7 @@ class CSR(Base):
         # instead batch load the certificates at once
         all_signed = _sa.select([Certificate.csr_id])
         return (
-            cls.query()
-            .filter_by(rejected=False)
-            .filter(CSR.id.in_(all_signed))
-            .all()
+            cls.query().filter_by(rejected=False).filter(CSR.id.in_(all_signed)).all()
         )
 
     @classmethod
@@ -265,8 +260,7 @@ class AccessLog(Base):
 
     def __str__(self):
         return (
-            "<{0.__class__.__name__} id={0.id} "
-            "csr={0.csr.sha256sum} when={0.when}>"
+            "<{0.__class__.__name__} id={0.id} " "csr={0.csr.sha256sum} when={0.when}>"
         ).format(self)
 
     def __repr__(self):
@@ -344,9 +338,7 @@ class Certificate(Base):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
 
     @classmethod
-    def sign(
-        cls, CSR, ca, lifetime=_datetime.timedelta(30 * 3), backdate=False
-    ):
+    def sign(cls, CSR, ca, lifetime=_datetime.timedelta(30 * 3), backdate=False):
         """Takes a CSR, signs it, generating and returning a Certificate.
         backdate causes the CA to set "notBefore" of signed certificates to
         match that of the CA Certificate. This is an ugly workaround for a

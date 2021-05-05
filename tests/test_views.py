@@ -2,8 +2,8 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 # Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import (unicode_literals, print_function,
-                        absolute_import, division)
+from __future__ import unicode_literals, print_function, absolute_import, division
+
 # Namespace cleanup
 del unicode_literals, print_function, absolute_import, division
 
@@ -23,7 +23,7 @@ from pyramid.httpexceptions import (
     HTTPRequestEntityTooLarge,
     HTTPBadRequest,
     HTTPNotFound,
-    )
+)
 
 from . import fixtures, ModelTestCase
 
@@ -32,7 +32,7 @@ from caramel.models import (
     DBSession,
     CSR,
     AccessLog,
-    )
+)
 from caramel import views
 
 
@@ -41,7 +41,7 @@ def dummypost(fix, **args):
     req.body = fix.pem
     req.content_length = len(req.body)
     req.matchdict["sha256"] = fix.sha256sum
-    req.registry.settings['ca.cert'] = 'abc123.crt'
+    req.registry.settings["ca.cert"] = "abc123.crt"
     return req
 
 
@@ -159,8 +159,9 @@ class TestCertFetch(ModelTestCase):
         self.assertEqual(self.req.response.status_int, 200)
         # Verify there's a new AccessLog entry
         self.assertEqual(csr.accessed[0].addr, self.req.remote_addr)
-        self.assertAlmostEqual(csr.accessed[0].when, now,
-                               delta=datetime.timedelta(seconds=1))
+        self.assertAlmostEqual(
+            csr.accessed[0].when, now, delta=datetime.timedelta(seconds=1)
+        )
 
     def test_exists_expired(self):
         csr = fixtures.CSRData.with_expired_cert()
@@ -173,8 +174,9 @@ class TestCertFetch(ModelTestCase):
         self.assertEqual(self.req.response.status_int, 202)
         # Verify there's a new AccessLog entry
         self.assertEqual(csr.accessed[0].addr, self.req.remote_addr)
-        self.assertAlmostEqual(csr.accessed[0].when, now,
-                               delta=datetime.timedelta(seconds=1))
+        self.assertAlmostEqual(
+            csr.accessed[0].when, now, delta=datetime.timedelta(seconds=1)
+        )
 
     def test_not_signed(self):
         csr = fixtures.CSRData.good()
@@ -187,8 +189,9 @@ class TestCertFetch(ModelTestCase):
         self.assertEqual(self.req.response.status_int, 202)
         # Verify there's a new AccessLog entry
         self.assertEqual(csr.accessed[0].addr, self.req.remote_addr)
-        self.assertAlmostEqual(csr.accessed[0].when, now,
-                               delta=datetime.timedelta(seconds=1))
+        self.assertAlmostEqual(
+            csr.accessed[0].when, now, delta=datetime.timedelta(seconds=1)
+        )
         pass
 
 
@@ -197,9 +200,11 @@ class TestMyView(unittest.TestCase):
     def setUp(self):
         self.config = testing.setUp()
         from sqlalchemy import create_engine
+
         engine = create_engine("sqlite://")
         init_session(engine, create=True)
         from caramel.models import MyModel
+
         with transaction.manager:
             model = MyModel(name="one", value=55)
             model.save()
@@ -210,6 +215,7 @@ class TestMyView(unittest.TestCase):
 
     def test_it(self):
         from caramel.views import my_view
+
         request = testing.DummyRequest()
         info = my_view(request)
         self.assertEqual(info["one"].name, "one")

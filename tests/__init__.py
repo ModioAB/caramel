@@ -2,8 +2,8 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 # Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import (unicode_literals, print_function,
-                        absolute_import, division)
+from __future__ import unicode_literals, print_function, absolute_import, division
+
 # Namespace cleanup
 del unicode_literals, print_function, absolute_import, division
 
@@ -17,7 +17,7 @@ import transaction
 from caramel.models import (
     init_session,
     DBSession,
-    )
+)
 
 from . import fixtures
 
@@ -34,6 +34,7 @@ class ModelTestCase(unittest.TestCase):
         # Clear existing session, if any.
         DBSession.remove()
         from sqlalchemy import create_engine
+
         engine = create_engine("sqlite://")
         init_session(engine, create=True)
         with transaction.manager:

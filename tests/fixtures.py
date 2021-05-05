@@ -2,8 +2,8 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 # Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import (unicode_literals, print_function,
-                        absolute_import, division)
+from __future__ import unicode_literals, print_function, absolute_import, division
+
 # Namespace cleanup
 del unicode_literals, print_function, absolute_import, division
 
@@ -21,14 +21,15 @@ except ImportError:
     from itertools import izip_longest as zip_longest
 
 from datetime import datetime, timedelta
+
 day = timedelta(days=1)
-year = 365 * day                # close enough
+year = 365 * day  # close enough
 now = datetime.now()
 
 from caramel import (
     models,
     views,
-    )
+)
 
 
 class defaultproperty(object):
@@ -45,8 +46,11 @@ class SimilarityComparable(object):
 
     def match(self, other):
         excludes = set(getattr(self, "_match_excluded_attrs_", ()))
-        attrs = [attr for attr in dir(self)
-                 if not attr.startswith("_") and attr not in excludes]
+        attrs = [
+            attr
+            for attr in dir(self)
+            if not attr.startswith("_") and attr not in excludes
+        ]
         if not attrs:
             return True
         getter = attrgetter(*attrs)
@@ -66,12 +70,14 @@ class AttributeCollection(object):
 
 
 class CSRFixture(AttributeCollection, SimilarityComparable):
-    __relations = ("accessed", "certificates",)
+    __relations = (
+        "accessed",
+        "certificates",
+    )
 
     @property
     def _match_excluded_attrs_(self):
-        return (super(CSRFixture, self)._match_excluded_attrs_ +
-                self.__relations)
+        return super(CSRFixture, self)._match_excluded_attrs_ + self.__relations
 
     @defaultproperty
     def sha256sum(self):
@@ -118,14 +124,18 @@ class AccessLogFixture(AttributeCollection, SimilarityComparable):
 
 
 # "Correct" subject prefix for test data
-subject_prefix = (('O', 'Example inc.'), ('OU', 'Example Dept'),)
+subject_prefix = (
+    ("O", "Example inc."),
+    ("OU", "Example Dept"),
+)
 
 
 class CertificateData(object):
     initial = CertificateFixture(
         not_before=now - 2 * year,
         not_after=now + 2 * year,
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE-----
             MIIEVDCCAjygAwIBAgIBZTANBgkqhkiG9w0BAQsFADAmMSQwIgYDVQQDDBtDYXJh
             bWVsIFNpZ25pbmcgQ2VydGlmaWNhdGUwHhcNMTQwODA4MTM0NDA0WhcNMTQxMDA4
@@ -152,13 +162,15 @@ class CertificateData(object):
             n4rH2rFn8rcQwSaRyE9NcOpirCur43MR42+LAfZq5s9j7CuQJTw6G0wvCHGqRIQ9
             X1qbQOxg6ig=
             -----END CERTIFICATE-----
-            """).encode("utf8"),
-        )
+            """
+        ).encode("utf8"),
+    )
 
     expired = CertificateFixture(
         not_before=initial.not_before,
         not_after=now - 1 * day,
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE-----
             MIIEVTCCAj2gAwIBAgIBaDANBgkqhkiG9w0BAQsFADAmMSQwIgYDVQQDDBtDYXJh
             bWVsIFNpZ25pbmcgQ2VydGlmaWNhdGUwHhcNMTQwODA4MTM1OTUxWhcNMTQxMDA4
@@ -185,21 +197,29 @@ class CertificateData(object):
             7CRL6mRM5+q4ICfesXzUXpPYjgD2UexIjSJNoYjiu3aKpjwvrZ88t8hPR46Uac7E
             5yvm61Agw/Tg
             -----END CERTIFICATE-----
-            """).encode("utf8"),
-        )
+            """
+        ).encode("utf8"),
+    )
 
     ca_cert = CertificateFixture(
         not_before=initial.not_before,
         not_after=initial.not_after,
-        subject=(('C', 'SE'), ('ST', 'Östergötland'),
-                 ('L', 'Norrköping'), ('O', 'Muppar AB'),
-                 ('OU', 'Muppar Teknik'),
-                 ('CN', 'Caramel Signing Certificate')),
-
-        common_subject=(('C', 'SE'), ('ST', 'Östergötland'),
-                        ('L', 'Norrköping'), ('O', 'Muppar AB')),
-
-        pem=dedent("""\
+        subject=(
+            ("C", "SE"),
+            ("ST", "Östergötland"),
+            ("L", "Norrköping"),
+            ("O", "Muppar AB"),
+            ("OU", "Muppar Teknik"),
+            ("CN", "Caramel Signing Certificate"),
+        ),
+        common_subject=(
+            ("C", "SE"),
+            ("ST", "Östergötland"),
+            ("L", "Norrköping"),
+            ("O", "Muppar AB"),
+        ),
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE-----
             MIIGwDCCBKigAwIBAgIRAJSEOECNQRHkq2SMiaXBGsIwDQYJKoZIhvcNAQENBQAw
             gY4xCzAJBgNVBAYTAlNFMRcwFQYDVQQIDA7DlnN0ZXJnw7Z0bGFuZDEUMBIGA1UE
@@ -239,28 +259,30 @@ class CertificateData(object):
             EybN1zenahQmhX4ljI5OSMYBP3gpkRu2HvP5SOwN28QHq2+mgCFxzdfdtiWoJ8a0
             7eLmmg==
             -----END CERTIFICATE-----
-            """).encode("utf8"),
-        )
+            """
+        ).encode("utf8"),
+    )
     # FIXME: add more certificates here, once we have something to test.
 
 
 class AccessLogData(object):
     initial_1 = AccessLogFixture(
         when=CertificateData.initial.not_before + 30 * day,
-        addr="127.0.0.1",       # XXX: bytestring or unicode string?
-        )
+        addr="127.0.0.1",  # XXX: bytestring or unicode string?
+    )
 
     initial_2 = AccessLogFixture(
         when=now - 3 * day,
         addr="127.0.0.127",
-        )
+    )
 
 
 class CSRData(object):
     initial = CSRFixture(
         orgunit="Example Dept",
         commonname="foo.example.com",
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE REQUEST-----
             MIICjTCCAXUCAQIwSDEVMBMGA1UECgwMRXhhbXBsZSBpbmMuMRUwEwYDVQQLDAxF
             eGFtcGxlIERlcHQxGDAWBgNVBAMMD2Zvby5leGFtcGxlLmNvbTCCASIwDQYJKoZI
@@ -277,11 +299,14 @@ class CSRData(object):
             O+jruZshnFL0KQybIokYGLLcb6NixdsCTSw+rfztuLUEEMP1ozNCgk8TX8mXWduM
             XIP49FHFe6IjLuj0ofRXiJPmS+4ToqRbNIBRoz7kSLov
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),  # py3 dedent can't handle bytes
+            """
+        ).encode(
+            "utf8"
+        ),  # py3 dedent can't handle bytes
         subject_components=(
-            ('O', 'Example inc.'),
-            ('OU', 'Example Dept'),
-            ('CN', 'foo.example.com'),
+            ("O", "Example inc."),
+            ("OU", "Example Dept"),
+            ("CN", "foo.example.com"),
         ),
         accessed=[
             AccessLogData.initial_2,
@@ -290,12 +315,13 @@ class CSRData(object):
         certificates=[
             CertificateData.initial,
         ],
-        )
+    )
 
     with_expired_cert = CSRFixture(
         orgunit="Example Dept",
         commonname="spam.example.com",
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE REQUEST-----
             MIICjjCCAXYCAQIwSTEVMBMGA1UECgwMRXhhbXBsZSBpbmMuMRUwEwYDVQQLDAxF
             eGFtcGxlIERlcHQxGTAXBgNVBAMMEHNwYW0uZXhhbXBsZS5jb20wggEiMA0GCSqG
@@ -312,21 +338,25 @@ class CSRData(object):
             oQN1HuxKCScUJ9Vtr0dnBLGAf62vAqv5yZYhl9Qnt5EJ9OtspWm0e8FwTjNmoA/z
             qnvUxskzM2ItxVV9oa9YDTid0GbJvF67QJQyVIO0Vz4uwg==
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),  # py3 dedent can't handle bytes
+            """
+        ).encode(
+            "utf8"
+        ),  # py3 dedent can't handle bytes
         subject_components=(
-            ('O', 'Example inc.'),
-            ('OU', 'Example Dept'),
-            ('CN', 'spam.example.com'),
+            ("O", "Example inc."),
+            ("OU", "Example Dept"),
+            ("CN", "spam.example.com"),
         ),
         certificates=[
             CertificateData.expired,
         ],
-        )
+    )
 
     good = CSRFixture(
         orgunit="Example Dept",
         commonname="bar.example.com",
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE REQUEST-----
             MIICjTCCAXUCAQIwSDEVMBMGA1UECgwMRXhhbXBsZSBpbmMuMRUwEwYDVQQLDAxF
             eGFtcGxlIERlcHQxGDAWBgNVBAMMD2Jhci5leGFtcGxlLmNvbTCCASIwDQYJKoZI
@@ -343,16 +373,18 @@ class CSRData(object):
             MN1FxWzEy4yXgzW8uv+lX6yyTtkfrC7e3LFiAuoUlBeD5GmsVd30Xz5iGnuQv3d0
             fekjT5Np8XIS2ERJmx4CIjs5VpE1FMNOMoJ35kQpkQaQ
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),
+            """
+        ).encode("utf8"),
         subject_components=(
-            ('O', 'Example inc.'),
-            ('OU', 'Example Dept'),
-            ('CN', 'bar.example.com'),
+            ("O", "Example inc."),
+            ("OU", "Example Dept"),
+            ("CN", "bar.example.com"),
         ),
-        )
+    )
 
     bad_signature = CSRFixture(  # `good` with the subject of `initial`
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE REQUEST-----
             MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
             YW1wbGUgRGVwdDEYMBYGA1UEAwwPZm9vLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
@@ -361,21 +393,25 @@ class CSRData(object):
             BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
             faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),
-        )
+            """
+        ).encode("utf8"),
+    )
 
     truncated = CSRFixture(
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE REQUEST-----
             MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
             YW1wbGUgRGVwdDEYMBYGA1UEAwwPYmFyLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
             AQEBBQADSwAwSAJBAKk2sD6xi/gfO3TVnoGMhUmkPDD17/qYzEvDdw/kponLTdNF
             asGx1//giKSBqBpUFt+KTz3NofK9Pf2qWWDxyUECAwEAAaAAMA0GCSqGSIb3DQEB
-            """).encode("utf8"),
-        )
+            """
+        ).encode("utf8"),
+    )
 
     trailing_content = CSRFixture(
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE REQUEST-----
             MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
             YW1wbGUgRGVwdDEYMBYGA1UEAwwPYmFyLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
@@ -388,11 +424,13 @@ class CSRData(object):
             bar
             baz
             quux
-            """).encode("utf8"),
-        )
+            """
+        ).encode("utf8"),
+    )
 
     leading_content = CSRFixture(
-        pem=dedent("""\
+        pem=dedent(
+            """\
             foo
             bar
             baz
@@ -405,11 +443,13 @@ class CSRData(object):
             BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
             faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),
-        )
+            """
+        ).encode("utf8"),
+    )
 
     multi_request = CSRFixture(
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE REQUEST-----
             MIIBAjCBrQIBADBIMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xFTATBgNVBAsMDEV4
             YW1wbGUgRGVwdDEYMBYGA1UEAwwPZm9vLmV4YW1wbGUuY29tMFwwDQYJKoZIhvcN
@@ -426,11 +466,13 @@ class CSRData(object):
             BQUAA0EAcsrzTdYBqlbq/JQaMSEoi64NmoxiC8GGzOaKlTxqRc7PKb+T1wN94PxJ
             faXw8kA8p0E6hmwFAE9QVkuTKvP/eg==
             -----END CERTIFICATE REQUEST-----
-            """).encode("utf8"),
-        )
+            """
+        ).encode("utf8"),
+    )
 
     not_pem = CSRFixture(
-        pem=dedent("""\
+        pem=dedent(
+            """\
             Egg and Bacon
             Egg, Sausage and Bacon
             Egg and Spam
@@ -441,8 +483,9 @@ class CSRData(object):
             Spam, Spam, Spam, Egg and Spam
             Spam, Spam, Spam, Spam, Spam, Spam, Baked Beans,
                 Spam, Spam, Spam and Spam
-            """).encode("utf8"),
-        )
+            """
+        ).encode("utf8"),
+    )
 
     empty = CSRFixture(pem=b"")
 
@@ -451,7 +494,8 @@ class CSRData(object):
     bad_subject = CSRFixture(
         orgunit="Example test dept.",
         commonname="baz.example.com",
-        pem=dedent("""\
+        pem=dedent(
+            """\
             -----BEGIN CERTIFICATE REQUEST-----
             MIIBCDCBswIBADBOMRUwEwYDVQQKDAxFeGFtcGxlIGluYy4xGzAZBgNVBAsMEkV4
             YW1wbGUgdGVzdCBkZXB0LjEYMBYGA1UEAwwPYmF6LmV4YW1wbGUuY29tMFwwDQYJ
@@ -460,14 +504,15 @@ class CSRData(object):
             SIb3DQEBBQUAA0EAhriivXQYFbdc8QrnDjwVCX8ZGXiGKQEC66LceWDdvOy+mDu8
             gi+L6IgnptU8VmEowAPp0veIH1MWJrnGdp7M0g==
             -----END CERTIFICATE REQUEST-----
-        """).encode("utf-8"),
+        """
+        ).encode("utf-8"),
         subject_components=(
             ("O", "Example inc."),
             ("OU", "Example test dept."),
             ("CN", "baz.example.com"),
         ),
-        )
+    )
 
     large_body = CSRFixture(
         pem="".join(("foobar", "x" * views._MAXLEN)).encode("utf-8"),
-        )
+    )
