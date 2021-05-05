@@ -1,35 +1,16 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
-
-# Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import unicode_literals, print_function, absolute_import, division
-
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
-#
-# ----- End header -----
-#
-
 from textwrap import dedent
 from hashlib import sha256
 from operator import attrgetter
-
-try:
-    from itertools import zip_longest
-except ImportError:
-    from itertools import izip_longest as zip_longest
-
 from datetime import datetime, timedelta
+from itertools import zip_longest
+
+from caramel import models, views
 
 day = timedelta(days=1)
 year = 365 * day  # close enough
 now = datetime.now()
-
-from caramel import (
-    models,
-    views,
-)
 
 
 class defaultproperty(object):

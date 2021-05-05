@@ -1,17 +1,10 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
-
-# Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import unicode_literals, print_function, absolute_import, division
-
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
-#
-# ----- End header -----
-#
+from hashlib import sha256
+from datetime import datetime
 
 from pyramid.response import Response
+from pyramid.view import view_config
 from pyramid.httpexceptions import (
     HTTPLengthRequired,
     HTTPRequestEntityTooLarge,
@@ -20,10 +13,9 @@ from pyramid.httpexceptions import (
     HTTPForbidden,
     HTTPError,
 )
-from pyramid.view import view_config
 
-from hashlib import sha256
-from datetime import datetime
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound
 
 from .models import (
     CSR,
@@ -31,8 +23,6 @@ from .models import (
     SigningCert,
 )
 
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.exc import NoResultFound
 
 # Maximum length allowed for csr uploads.
 # 2 kbyte should be enough for up to 4 kbit keys.

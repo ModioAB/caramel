@@ -1,20 +1,8 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
-
-# Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import unicode_literals, print_function, absolute_import, division
-
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
-#
-# ----- End header -----
-#
-
+import datetime
 import unittest
 import unittest.mock
-import transaction
-import datetime
 
 from pyramid import testing
 from pyramid.response import Response
@@ -25,7 +13,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
 )
 
-from . import fixtures, ModelTestCase
+import transaction
 
 from caramel.models import (
     init_session,
@@ -34,6 +22,8 @@ from caramel.models import (
     AccessLog,
 )
 from caramel import views
+
+from . import fixtures, ModelTestCase
 
 
 def dummypost(fix, **args):
