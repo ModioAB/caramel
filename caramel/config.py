@@ -4,7 +4,15 @@
  in one place used by the caramel CLI tools/scripts"""
 
 import argparse
+import logging
 import os
+
+LOG_LEVEL = (
+    logging.ERROR,
+    logging.WARNING,
+    logging.INFO,
+    logging.DEBUG,
+)
 
 
 def add_inifile_argument(parser, env=None):
@@ -30,6 +38,18 @@ def add_db_url_argument(parser, env=None):
         "--dburl",
         help="URL to the database to use",
         type=str,
+    )
+
+
+def add_verbosity_argument(parser):
+    """Adds an argument for verbosity to a given parser, counting the amount of
+    'v's and 'verbose' on the commandline"""
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="Verbosity of root logger, increasing the more 'v's are added",
+        action="count",
+        default=0,
     )
 
 
@@ -93,3 +113,30 @@ def get_db_url(arguments=None, settings=None, required=True):
         setting_name="sqlalchemy.url",
         settings=settings,
     )
+
+
+def get_log_level(argument_level, logger=None, env=None):
+    """Calculates the highest verbosity(here inverted) from the argument,
+    environment and root, capping it to between 0-3, returning the log level"""
+
+    if env is None:
+        env = os.environ
+    env_level = int(env.get("CARAMEL_LOG_LEVEL", 0))
+
+    if logger is None:
+        logger = logging.getLogger()
+    current_level = LOG_LEVEL.index(logger.level) if logger.level in LOG_LEVEL else 0
+
+    verbosity = max(argument_level, env_level, current_level)
+    verbosity = min(verbosity, len(LOG_LEVEL) - 1)
+    log_level = LOG_LEVEL[verbosity]
+    return log_level
+
+
+def configure_log_level(arguments: argparse.Namespace, logger=None):
+    """Sets the root loggers level to the highest verbosity from the argument,
+    environment and config-file"""
+    log_level = get_log_level(arguments.verbose)
+    if logger is None:
+        logger = logging.getLogger()
+    logger.setLevel(log_level)
