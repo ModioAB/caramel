@@ -66,8 +66,7 @@ def mainloop(delay, ca, delta):
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         while True:
             csrs = models.CSR.unsigned()
-            futures = [executor.submit(csr_sign, csr, ca, delta)
-                       for csr in csrs]
+            futures = [executor.submit(csr_sign, csr, ca, delta) for csr in csrs]
 
             time.sleep(delay)
             for future in concurrent.futures.as_completed(futures):
@@ -82,8 +81,7 @@ def cmdline():
     parser = argparse.ArgumentParser()
     parser.add_argument("inifile")
     parser.add_argument("--delay", help="How long to sleep. (ms)")
-    parser.add_argument("--valid",
-                        help="How many hours the certificate is valid for")
+    parser.add_argument("--valid", help="How many hours the certificate is valid for")
     args = parser.parse_args()
     return args
 
@@ -101,11 +99,11 @@ def main():
     logger.setLevel(logging.DEBUG)
     args = cmdline()
     env = bootstrap(args.inifile)
-    settings, closer = env['registry'].settings, env['closer']
-    engine = create_engine(settings['sqlalchemy.url'])
+    settings, closer = env["registry"].settings, env["closer"]
+    engine = create_engine(settings["sqlalchemy.url"])
     models.init_session(engine)
-    delay = int(settings.get('delay', 500)) / 1000
-    valid = int(settings.get('valid', 3))
+    delay = int(settings.get("delay", 500)) / 1000
+    valid = int(settings.get("valid", 3))
     delta = datetime.timedelta(days=0, hours=valid)
     del valid
 
