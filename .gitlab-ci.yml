@@ -1,0 +1,76 @@
+---
+# Keep the includes first to illustrate that definitions that everything that
+# follows override included definitions.
+include:
+  # https://docs.gitlab.com/ee/ci/yaml/README.html#includefile
+  - project: ModioAB/CI
+    ref: main
+    file:
+      - /ci/default.yml
+      - /ci/rebase.yml
+
+workflow:
+  # Similar to "Branch pipelines" definition,
+  # but with an exception of "push" to avoid duplicates
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: never
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH
+
+stages:
+  - test
+  - rebase
+
+caramel:test:
+  stage: test
+  when: always
+  image: ${PYTHON_IMAGE}
+  before_script:
+    - pip3 install .
+  script:
+    - python3 -m unittest discover
+
+rebase:test:
+  extends: .rebase
+  stage: rebase
+  needs:
+    - caramel:test
+  script:
+    - pip3 install .
+    - git every
+      -x 'pip3 install --editable .'
+      -x 'flake8 caramel/ tests/'
+      -x 'black --check caramel/ tests/'
+
+caramel:black:
+  stage: test
+  when: always
+  image: ${PYTHON_IMAGE}
+  before_script:
+    - pip3 install black
+  script:
+    - black --check --diff caramel/ tests/
+
+caramel:flake:
+  stage: test
+  when: always
+  image: ${PYTHON_IMAGE}
+  before_script:
+    - pip3 install flake8
+  script:
+    - flake8 caramel/ tests/
+
+rebase:check:
+  extends: .rebase
+  stage: rebase
+  needs:
+    - caramel:flake
+    - caramel:black
+  script:
+    - python3 -m pip install black flake8
+    # Always install "." first to track possible dependency changes
+    - git every
+      -x 'pip3 install --editable .'
+      -x 'flake8 caramel/ tests/'
+      -x 'black --check caramel/ tests/'

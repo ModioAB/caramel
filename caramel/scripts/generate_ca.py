@@ -16,10 +16,11 @@ CA_YEARS = 24  # Beware of unixtime ;)
 
 CA_EXTENSIONS = [
     # Key usage for a CA cert.
-    _crypto.X509Extension(b"basicConstraints", critical=True,
-                          value=b"CA:true, pathlen:0"),
+    _crypto.X509Extension(
+        b"basicConstraints", critical=True, value=b"CA:true, pathlen:0"
+    ),
     # no cRLSign as we do not use CRLs in caramel.
-    _crypto.X509Extension(b"keyUsage", critical=True, value=b"keyCertSign")
+    _crypto.X509Extension(b"keyUsage", critical=True, value=b"keyCertSign"),
 ]
 
 
@@ -28,7 +29,7 @@ def _crypto_patch():
     https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
     https://github.com/pyca/pyopenssl/issues/129 is an open issue
     about it."""
-    _crypto._lib.ASN1_STRING_set_default_mask_asc(b'utf8only')
+    _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
 
 
 _crypto_patch()
@@ -37,8 +38,8 @@ _crypto_patch()
 # Hack hack. :-)
 def CA_LIFE():
     d = datetime.date.today()
-    t = datetime.date(d.year+CA_YEARS, d.month, d.day)
-    return int((t-d).total_seconds())
+    t = datetime.date(d.year + CA_YEARS, d.month, d.day)
+    return int((t - d).total_seconds())
 
 
 # adapted from models.py
@@ -48,7 +49,7 @@ def components(subject):
 
 
 def matching_template(x509, cacert):
-    """ Takes a subject as a dict, and returns if all required fields
+    """Takes a subject as a dict, and returns if all required fields
     match. Otherwise raises exception"""
 
     def later_check(subject):
@@ -71,8 +72,7 @@ def matching_template(x509, cacert):
 
     for (ca, sub) in zip(casubject, subject):
         if ca != sub:
-            raise ValueError("Subject needs to match CA cert:"
-                             "{}".format(casubject))
+            raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
 
 
 def sign_req(req, cacert, cakey):
@@ -104,18 +104,19 @@ def sign_req(req, cacert, cakey):
 
     cacert = cert
 
-    extension = _crypto.X509Extension(b"subjectKeyIdentifier",
-                                      critical=False,
-                                      value=b"hash",
-                                      subject=cert)
+    extension = _crypto.X509Extension(
+        b"subjectKeyIdentifier", critical=False, value=b"hash", subject=cert
+    )
     cert.add_extensions([extension])
 
     # We need subjectKeyIdentifier to be added before we can add
     # authorityKeyIdentifier.
-    extension = _crypto.X509Extension(b"authorityKeyIdentifier",
-                                      critical=False,
-                                      value=b"issuer:always,keyid:always",
-                                      issuer=cacert)
+    extension = _crypto.X509Extension(
+        b"authorityKeyIdentifier",
+        critical=False,
+        value=b"issuer:always,keyid:always",
+        issuer=cacert,
+    )
     cert.add_extensions([extension])
 
     cert.sign(cakey, "sha512")
@@ -147,10 +148,9 @@ def create_ca(subject):
 
 
 def write_files(key, keyname, cert, certname):
-
     def writefile(data, name):
-        with open(name, 'w') as f:
-            stream = data.decode('utf8')
+        with open(name, "w") as f:
+            stream = data.decode("utf8")
             f.write(stream)
 
     _key = _crypto.dump_privatekey(_crypto.FILETYPE_PEM, key)
@@ -188,8 +188,7 @@ def build_ca(keyname, certname):
     template = tuple(template)
 
     key, req, cert = create_ca(template)
-    write_files(key=key, keyname=keyname,
-                cert=cert, certname=certname)
+    write_files(key=key, keyname=keyname, cert=cert, certname=certname)
 
 
 def main():

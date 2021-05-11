@@ -1,44 +1,34 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
-
-# Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import (unicode_literals, print_function,
-                        absolute_import, division)
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
-#
-# ----- End header -----
-#
+from hashlib import sha256
+from datetime import datetime
 
 from pyramid.response import Response
+from pyramid.view import view_config
 from pyramid.httpexceptions import (
     HTTPLengthRequired,
     HTTPRequestEntityTooLarge,
     HTTPBadRequest,
     HTTPNotFound,
     HTTPForbidden,
-    HTTPError
-    )
-from pyramid.view import view_config
+    HTTPError,
+)
 
-from hashlib import sha256
-from datetime import datetime
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound
 
 from .models import (
     CSR,
     AccessLog,
     SigningCert,
-    )
+)
 
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.exc import NoResultFound
 
 # Maximum length allowed for csr uploads.
 # 2 kbyte should be enough for up to 4 kbit keys.
 # XXX: This should probably be handled outside of app (i.e. by the
 #      server), or at least be configurable.
-_MAXLEN = 2 * 2**10
+_MAXLEN = 2 * 2 ** 10
 
 
 def raise_for_length(req, limit=_MAXLEN):
@@ -48,9 +38,7 @@ def raise_for_length(req, limit=_MAXLEN):
     if length is None:
         raise HTTPLengthRequired
     if length > limit:
-        raise HTTPRequestEntityTooLarge(
-            "Max size: {0} kB".format(limit / 2**10)
-            )
+        raise HTTPRequestEntityTooLarge("Max size: {0} kB".format(limit / 2 ** 10))
 
 
 def raise_for_subject(components, required_prefix):
@@ -65,11 +53,7 @@ def raise_for_subject(components, required_prefix):
 # XXX: Is this the right way? Catch-class JSON converter of Exceptions
 @view_config(context=HTTPError)
 def HTTPErrorToJson(exc, request):
-    exc.json_body = {
-        "status": exc.code,
-        "title": exc.title,
-        "detail": exc.detail
-    }
+    exc.json_body = {"status": exc.code, "title": exc.title, "detail": exc.detail}
     exc.content_type = "application/problem+json"
     request.response = exc
     return request.response
@@ -123,23 +107,23 @@ def cert_fetch(request):
     if cert:
         if datetime.utcnow() < cert.not_after:
             # XXX: appropriate content-type is ... ?
-            return Response(cert.pem,
-                            content_type="application/octet-stream",
-                            charset="UTF-8")
+            return Response(
+                cert.pem, content_type="application/octet-stream", charset="UTF-8"
+            )
     request.response.status_int = 202
     return csr
 
 
-@view_config(route_name="ca", request_method="GET",
-             renderer="string", http_cache=3600)
+@view_config(route_name="ca", request_method="GET", renderer="string", http_cache=3600)
 def ca_fetch(request):
-    ca_file = request.registry.settings['ca.cert']
+    ca_file = request.registry.settings["ca.cert"]
     ca = SigningCert.from_files(ca_file)
     return ca.pem.decode("utf8")
 
 
-@view_config(route_name="cabundle", request_method="GET",
-             renderer="string", http_cache=3600)
+@view_config(
+    route_name="cabundle", request_method="GET", renderer="string", http_cache=3600
+)
 def ca_bundle_fetch(request):
     """Attempt to return a bunle of all our intermediates"""
     bundle = ca_fetch(request)

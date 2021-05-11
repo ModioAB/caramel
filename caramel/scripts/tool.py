@@ -88,9 +88,7 @@ def print_list():
 
     for csr_id, csr_commonname, csr_sha256sum, not_after in valid_requests:
         not_after = "----------" if not_after is None else str(not_after)
-        output = " ".join(
-            (str(csr_id), csr_commonname, csr_sha256sum, not_after)
-        )
+        output = " ".join((str(csr_id), csr_commonname, csr_sha256sum, not_after))
         # TODO: Add lifetime of latest (fetched?) cert for the key.
         print(output)
 
@@ -183,9 +181,7 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
         except Exception:
             error_out("Not found or some other error")
         futures = (
-            executor.submit(
-                refresh, csr, ca, lifetime_short, lifetime_long, backdate
-            )
+            executor.submit(refresh, csr, ca, lifetime_short, lifetime_long, backdate)
             for csr in csrlist
         )
         for future in concurrent.futures.as_completed(futures):

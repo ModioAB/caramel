@@ -1,30 +1,16 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
-
-# Make things as three-ish as possible (requires python >= 2.6)
-from __future__ import (unicode_literals, print_function,
-                        absolute_import, division)
-# Namespace cleanup
-del unicode_literals, print_function, absolute_import, division
-
-#
-# ----- End header -----
-#
-
 import unittest
+from itertools import zip_longest
+
 import transaction
 
 from caramel.models import (
     init_session,
     DBSession,
-    )
+)
 
 from . import fixtures
-
-try:
-    from itertools import zip_longest
-except ImportError:
-    from itertools import izip_longest as zip_longest
 
 
 class ModelTestCase(unittest.TestCase):
@@ -34,6 +20,7 @@ class ModelTestCase(unittest.TestCase):
         # Clear existing session, if any.
         DBSession.remove()
         from sqlalchemy import create_engine
+
         engine = create_engine("sqlite://")
         init_session(engine, create=True)
         with transaction.manager:
