@@ -23,6 +23,7 @@ shouldn't have your private key accessible by the web-application.
 it."""
 
 import argparse
+
 import transaction
 import sys
 import logging
@@ -35,6 +36,7 @@ from pyramid.paster import bootstrap
 from sqlalchemy import create_engine
 
 import caramel.models as models
+from caramel import config
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +81,7 @@ def mainloop(delay, ca, delta):
 def cmdline():
     """Basically just parsing the arguments and returning them"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("inifile")
+    config.add_inifile_argument(parser)
     parser.add_argument("--delay", help="How long to sleep. (ms)")
     parser.add_argument("--valid", help="How many hours the certificate is valid for")
     args = parser.parse_args()

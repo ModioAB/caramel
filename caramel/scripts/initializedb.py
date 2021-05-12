@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
-import os
-import sys
+import argparse
 
 from sqlalchemy import engine_from_config
 
@@ -10,19 +9,20 @@ from pyramid.paster import (
     setup_logging,
 )
 
-from ..models import init_session
+import caramel.config as config
+from caramel.models import init_session
 
 
-def usage(argv):
-    cmd = os.path.basename(argv[0])
-    print("usage: %s <config_uri>\n" '(example: "%s development.ini")' % (cmd, cmd))
-    sys.exit(1)
+def cmdline():
+    parser = argparse.ArgumentParser()
+    config.add_inifile_argument(parser)
+    args = parser.parse_args()
+    return args
 
 
-def main(argv=sys.argv):
-    if len(argv) != 2:
-        usage(argv)
-    config_uri = argv[1]
+def main():
+    args = cmdline()
+    config_uri = args.inifile
     setup_logging(config_uri)
     settings = get_appsettings(config_uri)
     engine = engine_from_config(settings, "sqlalchemy.")
