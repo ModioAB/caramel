@@ -53,6 +53,20 @@ def add_verbosity_argument(parser):
     )
 
 
+def add_ca_arguments(parser):
+    """Adds a ca-cert and ca-key argument to a given parser"""
+    parser.add_argument(
+        "--ca-cert",
+        help="Path to CA certificate to use",
+        type=str,
+    )
+    parser.add_argument(
+        "--ca-key",
+        help="Path to CA key to use",
+        type=str,
+    )
+
+
 class CheckInifilePathSet(argparse.Action):
     """An arparse.Action to raise an error if no config file has been
     defined by the user or  in the environment"""
@@ -140,3 +154,22 @@ def configure_log_level(arguments: argparse.Namespace, logger=None):
     if logger is None:
         logger = logging.getLogger()
     logger.setLevel(log_level)
+
+
+def get_ca_cert_key_path(arguments: argparse.Namespace, settings=None, required=True):
+    """Returns the path to the ca-cert and ca-key to use"""
+    ca_cert_path = _get_config_value(
+        arguments,
+        variable="ca-cert",
+        required=required,
+        setting_name="ca.cert",
+        settings=settings,
+    )
+    ca_key_path = _get_config_value(
+        arguments,
+        variable="ca-key",
+        required=required,
+        setting_name="ca.key",
+        settings=settings,
+    )
+    return ca_cert_path, ca_key_path
