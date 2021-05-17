@@ -37,3 +37,37 @@ class CheckInifilePathSet(argparse.Action):
                 " specify a path in the call like so:\n"
                 "\t caramel_initializedb /path/to/config.ini [...]"
             )
+
+
+def _get_config_value(
+    arguments: argparse.Namespace,
+    variable,
+    required=False,
+    setting_name=None,
+    settings=None,
+    env=None,
+):
+    """Returns what value to use for a given config variable, prefer argument >
+    env-variable > config-file"""
+    result = None
+    if setting_name is None:
+        setting_name = variable
+    if settings is not None:
+        result = settings.get(setting_name, result)
+
+    if env is None:
+        env = os.environ
+    env_var = "CARAMEL_" + variable.upper().replace("-", "_")
+    result = env.get(env_var, result)
+
+    arg_value = getattr(arguments, variable, result)
+    result = arg_value if arg_value is not None else result
+
+    if required and result is None:
+        raise ValueError(
+            f"No {variable} could be found as either an argument,"
+            f" in the environment variable {env_var} or in the config file",
+            variable,
+            env_var,
+        )
+    return result
