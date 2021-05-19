@@ -17,8 +17,11 @@ import concurrent.futures
 
 def cmdline():
     parser = argparse.ArgumentParser()
+
     config.add_inifile_argument(parser)
     config.add_db_url_argument(parser)
+    config.add_ca_arguments(parser)
+
     parser.add_argument(
         "--long",
         help="Generate a long lived cert(1 year)",
@@ -208,11 +211,11 @@ def main():
     del _short, _long
 
     try:
-        certname = settings["ca.cert"]
-        keyname = settings["ca.key"]
-    except KeyError:
-        error_out("config file needs ca.cert and ca.key properly set")
-    ca = models.SigningCert.from_files(certname, keyname)
+        ca_cert_path, ca_key_path = config.get_ca_cert_key_path(args, settings)
+    except ValueError as error:
+        error_out(str(error))
+
+    ca = models.SigningCert.from_files(ca_cert_path, ca_key_path)
 
     if life_short > life_long:
         error_out(
