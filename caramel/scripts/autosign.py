@@ -82,6 +82,7 @@ def cmdline():
     """Basically just parsing the arguments and returning them"""
     parser = argparse.ArgumentParser()
     config.add_inifile_argument(parser)
+    config.add_db_url_argument(parser)
     parser.add_argument("--delay", help="How long to sleep. (ms)")
     parser.add_argument("--valid", help="How many hours the certificate is valid for")
     args = parser.parse_args()
@@ -102,7 +103,8 @@ def main():
     args = cmdline()
     env = bootstrap(args.inifile)
     settings, closer = env["registry"].settings, env["closer"]
-    engine = create_engine(settings["sqlalchemy.url"])
+    db_url = config.get_db_url(args, settings)
+    engine = create_engine(db_url)
     models.init_session(engine)
     delay = int(settings.get("delay", 500)) / 1000
     valid = int(settings.get("valid", 3))

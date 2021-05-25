@@ -18,6 +18,7 @@ import concurrent.futures
 def cmdline():
     parser = argparse.ArgumentParser()
     config.add_inifile_argument(parser)
+    config.add_db_url_argument(parser)
     parser.add_argument(
         "--long",
         help="Generate a long lived cert(1 year)",
@@ -195,7 +196,8 @@ def main():
     args = cmdline()
     env = bootstrap(args.inifile)
     settings, closer = env["registry"].settings, env["closer"]
-    engine = create_engine(settings["sqlalchemy.url"])
+    db_url = config.get_db_url(args, settings)
+    engine = create_engine(db_url)
     models.init_session(engine)
     settings_backdate = asbool(settings.get("backdate", False))
 

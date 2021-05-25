@@ -2,6 +2,7 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 """caramel.config is a helper library that standardizes and collects the logic
  in one place used by the caramel CLI tools/scripts"""
+
 import argparse
 import os
 
@@ -20,6 +21,15 @@ def add_inifile_argument(parser, env=None):
         default=default_ini,
         type=str,
         action=CheckInifilePathSet,
+    )
+
+
+def add_db_url_argument(parser, env=None):
+    """Adds an argument for the URL for the database to a given parser"""
+    parser.add_argument(
+        "--dburl",
+        help="URL to the database to use",
+        type=str,
     )
 
 
@@ -71,3 +81,15 @@ def _get_config_value(
             env_var,
         )
     return result
+
+
+def get_db_url(arguments=None, settings=None, required=True):
+    """Returns URL to use for database, prefer argument > env-variable >
+    config-file"""
+    return _get_config_value(
+        arguments,
+        variable="dburl",
+        required=required,
+        setting_name="sqlalchemy.url",
+        settings=settings,
+    )
