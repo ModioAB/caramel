@@ -15,17 +15,23 @@ from caramel.models import init_session
 
 def cmdline():
     parser = argparse.ArgumentParser()
+
     config.add_inifile_argument(parser)
     config.add_db_url_argument(parser)
+    config.add_verbosity_argument(parser)
+
     args = parser.parse_args()
     return args
 
 
 def main():
     args = cmdline()
-    config_uri = args.inifile
-    setup_logging(config_uri)
-    settings = get_appsettings(config_uri)
+    config_path = args.inifile
+    settings = get_appsettings(config_path)
+
+    setup_logging(config_path)
+    config.configure_log_level(args)
+
     db_url = config.get_db_url(args, settings)
     engine = create_engine(db_url)
     init_session(engine, create=True)

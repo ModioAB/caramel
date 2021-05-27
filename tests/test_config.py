@@ -3,6 +3,7 @@
 """tests.test_config contains the unittests for caramel.config"""
 import argparse
 import unittest
+import logging
 
 from caramel import config
 
@@ -174,3 +175,55 @@ class TestGetConfigValue(unittest.TestCase):
                 settings={},
                 env={},
             )
+
+
+class TestVerbosity(unittest.TestCase):
+    """Tests for the verbosity configuration from caramel.config"""
+
+    """Data set used for testing config.get_log_level,
+    (argument_level, environment, root_level, expected)"""
+    VERBOSITY_DATA: tuple = (
+        (2, {}, logging.CRITICAL, logging.INFO),
+        (-1, {"CARAMEL_LOG_LEVEL": -1}, logging.CRITICAL, logging.ERROR),
+        (2, {"CARAMEL_LOG_LEVEL": 1}, logging.ERROR, logging.INFO),
+        (2, {"CARAMEL_LOG_LEVEL": 3}, logging.WARNING, logging.DEBUG),
+        (2, {"CARAMEL_LOG_LEVEL": 1}, logging.DEBUG, logging.DEBUG),
+        (2, {"CARAMEL_LOG_LEVEL": 3}, logging.WARNING, logging.DEBUG),
+        (0, {"CARAMEL_LOG_LEVEL": 2}, logging.DEBUG, logging.DEBUG),
+        (0, {"CARAMEL_LOG_LEVEL": 3}, logging.WARNING, logging.DEBUG),
+    )
+
+    """Data set used for testing config.add_verbosity_argument,
+    ([arguments], expected)"""
+    VERBOSITY_ARGUMENT_DATA: tuple = (
+        ([], 0),
+        (["-v"], 1),
+        (["-vv"], 2),
+        (["-vvv"], 3),
+        (["-vvvv"], 4),
+        (["--verbose", "-v"], 2),
+        (["--verbose", "-vv"], 3),
+        (["--verbose", "-v", "--verbose"], 3),
+    )
+
+    def test_verbosity_argument(self):
+        """tests multiple cases for config.add_verbosity_argument"""
+
+        for arg, expected in TestVerbosity.VERBOSITY_ARGUMENT_DATA:
+            with self.subTest(arg=arg, expected=expected):
+                parser = argparse.ArgumentParser()
+                config.add_verbosity_argument(parser)
+                args = parser.parse_args(arg)
+                self.assertEqual(expected, args.verbose)
+
+    def test_get_log_level(self):
+        """tests multiple cases for config.get_log_level"""
+        logger = logging.getLogger("fake")
+
+        for arg_lvl, env, root_lvl, expected in TestVerbosity.VERBOSITY_DATA:
+            with self.subTest(
+                arg_lvl=arg_lvl, env=env, root_lvl=root_lvl, expected=expected
+            ):
+                logger.setLevel(root_lvl)
+                verbosity = config.get_log_level(arg_lvl, logger, env)
+                self.assertEqual(expected, verbosity)

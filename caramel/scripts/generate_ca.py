@@ -6,7 +6,10 @@ import argparse
 import uuid
 import os
 import OpenSSL.crypto as _crypto
-from pyramid.paster import bootstrap
+from pyramid.paster import (
+    bootstrap,
+    setup_logging,
+)
 from caramel import config
 
 VERSION = 0x2
@@ -164,6 +167,7 @@ def write_files(key, keyname, cert, certname):
 def cmdline():
     parser = argparse.ArgumentParser()
     config.add_inifile_argument(parser)
+    config.add_verbosity_argument(parser)
     args = parser.parse_args()
     return args
 
@@ -194,7 +198,12 @@ def build_ca(keyname, certname):
 
 def main():
     args = cmdline()
-    env = bootstrap(args.inifile)
+    config_path = args.inifile
+
+    setup_logging(config_path)
+    config.configure_log_level(args)
+
+    env = bootstrap(config_path)
     settings, closer = env["registry"].settings, env["closer"]
 
     ca_cert = settings.get("ca.cert")
