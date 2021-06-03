@@ -89,6 +89,7 @@ def cmdline():
     config.add_inifile_argument(parser)
     config.add_db_url_argument(parser)
     config.add_verbosity_argument(parser)
+    config.add_ca_arguments(parser)
 
     parser.add_argument("--delay", help="How long to sleep. (ms)")
     parser.add_argument("--valid", help="How many hours the certificate is valid for")
@@ -125,11 +126,10 @@ def main():
     del valid
 
     try:
-        certname = settings["ca.cert"]
-        keyname = settings["ca.key"]
-    except KeyError:
-        error_out("config file needs ca.cert and ca.key properly set", closer)
-    ca = models.SigningCert.from_files(certname, keyname)
+        ca_cert_path, ca_key_path = config.get_ca_cert_key_path(args, settings)
+    except ValueError as error:
+        error_out(str(error), closer)
+    ca = models.SigningCert.from_files(ca_cert_path, ca_key_path)
     mainloop(delay, ca, delta)
 
 

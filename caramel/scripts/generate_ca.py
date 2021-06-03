@@ -166,8 +166,11 @@ def write_files(key, keyname, cert, certname):
 
 def cmdline():
     parser = argparse.ArgumentParser()
+
     config.add_inifile_argument(parser)
     config.add_verbosity_argument(parser)
+    config.add_ca_arguments(parser)
+
     args = parser.parse_args()
     return args
 
@@ -206,19 +209,14 @@ def main():
     env = bootstrap(config_path)
     settings, closer = env["registry"].settings, env["closer"]
 
-    ca_cert = settings.get("ca.cert")
-    ca_key = settings.get("ca.key")
-    if not ca_cert:
-        print("Missing 'ca.cert' in ini file")
+    try:
+        ca_cert_path, ca_key_path = config.get_ca_cert_key_path(args, settings)
+    except ValueError as error:
+        print(error)
         closer()
         exit()
 
-    if not ca_key:
-        print("Missing 'ca.cert' in ini file")
-        closer()
-        exit()
-
-    for f in ca_cert, ca_key:
+    for f in ca_cert_path, ca_key_path:
         if os.path.exists(f):
             print("File already exists: {}. Refusing to corrupt.".format(f))
             closer()
@@ -227,7 +225,7 @@ def main():
             dname = os.path.dirname(f)
             os.makedirs(dname, exist_ok=True)
 
-    print("Will write key to {}".format(ca_key))
-    print("Will write cert to {}".format(ca_cert))
+    print("Will write key to {}".format(ca_key_path))
+    print("Will write cert to {}".format(ca_cert_path))
 
-    build_ca(keyname=ca_key, certname=ca_cert)
+    build_ca(keyname=ca_key_path, certname=ca_cert_path)
