@@ -21,6 +21,8 @@ def cmdline():
     config.add_inifile_argument(parser)
     config.add_db_url_argument(parser)
     config.add_ca_arguments(parser)
+    config.add_backdate_argument(parser)
+    config.add_lifetime_arguments(parser)
 
     parser.add_argument(
         "--long",
@@ -202,10 +204,10 @@ def main():
     db_url = config.get_db_url(args, settings)
     engine = create_engine(db_url)
     models.init_session(engine)
-    settings_backdate = asbool(settings.get("backdate", False))
+    settings_backdate = asbool(config.get_backdate(args, settings, default=False))
 
-    _short = int(settings.get("lifetime.short", 48))
-    _long = int(settings.get("lifetime.long", 7 * 24))
+    _short = int(config.get_lifetime_short(args, settings, default=48))
+    _long = int(config.get_lifetime_long(args, settings, default=7 * 24))
     life_short = calc_lifetime(relativedelta(hours=_short))
     life_long = calc_lifetime(relativedelta(hours=_long))
     del _short, _long
