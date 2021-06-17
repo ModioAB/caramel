@@ -89,10 +89,12 @@ def _get_config_value(
     required=False,
     setting_name=None,
     settings=None,
+    default=None,
     env=None,
 ):
     """Returns what value to use for a given config variable, prefer argument >
-    env-variable > config-file"""
+    env-variable > config-file, if a value cant be found and default is not
+    None, default is returned"""
     result = None
     if setting_name is None:
         setting_name = variable
@@ -106,6 +108,9 @@ def _get_config_value(
 
     arg_value = getattr(arguments, variable, result)
     result = arg_value if arg_value is not None else result
+
+    if result is None:
+        result = default
 
     if required and result is None:
         raise ValueError(
