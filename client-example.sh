@@ -1,14 +1,15 @@
 #! /bin/sh
-CA_CERT=/etc/pki/tls/certs/ca.example.com.crt
-MY_CRT=/etc/pki/tls/certs/client.example.com.crt
-MY_CSR=/etc/pki/tls/certs/client.example.com.csr
-MY_KEY=/etc/pki/tls/private/client.example.com.key
+CA_DIR="$1"
+CA_CERT="$CA_DIR/caramel.ca.cert"
+MY_CRT="$CA_DIR/client.crt"
+MY_CSR="$CA_DIR/client.csr"
+MY_KEY="$CA_DIR/client.key"
 
-CLIENTID=`cat /etc/machine-id`   # For example
-CLIENTID=`sed -e 's/://g' /sys/class/net/eth0/address`
+CLIENTID=$(cat /etc/machine-id)               # For example machine ID or MAC-address
+CLIENTID=f11f05a9-773e-4b7e-b985-f5eb8fe18852 # or UUID https://xkcd.com/221/
 
-SUBJECT="/O=ExampleInc/OU=ExampleCom/CN=$CLIENTID"
-POST_URL=https://caramel.example.com/ra
+SUBJECT="/C=SE/ST=Östergötland/L=Linköping/O=Muppar AB/OU=Muppar Teknik/CN=$CLIENTID"
+POST_URL=http://127.0.0.1:6543/
 
 echo $SUBJECT
 
@@ -27,7 +28,6 @@ fi
 CSRSUM=$(sha256sum $MY_CSR |cut -f1 -d" ")
 
 CURL_OPTS="--silent --show-error --remote-time --connect-timeout 300 --max-time 600 --cacert $CA_CERT"
-
 
 # The logic here is fun.
 # If I don't have a cert, we try to download it.
@@ -60,11 +60,11 @@ fi
 #  if 404
 #       upload CSR
 
-STATUS=$(curl ${CURL_OPTS}  -w '%{http_code}' --url ${POST_URL}/${CSRSUM} -o ${CSRSUM})
+STATUS=$(curl ${CURL_OPTS} -w '%{http_code}' --url ${POST_URL}/"${CSRSUM}" -o "${CA_DIR}/${CSRSUM}")
 
 if [ $STATUS -eq 200 ];
 then
-    mv $CSRSUM $MY_CRT
+    mv $CA_DIR/$CSRSUM $MY_CRT
 fi
 
 if [ $STATUS -eq 202 -o $STATUS -eq 304 ];
@@ -76,6 +76,7 @@ fi
 
 if [ $STATUS -eq 404 ];
 then
-    rm -f $CSRSUM
-    curl ${CURL_OPTS} --data-binary @$MY_CSR ${POST_URL}/${CSRSUM}
+  rm -f "$CA_DIR/$CSRSUM"
+  curl ${CURL_OPTS} --data-binary @$MY_CSR ${POST_URL}/${CSRSUM}
+  echo "" # ugly "hack" to guarantee new line before next command
 fi
