@@ -10,15 +10,16 @@ requires = [
     "cryptography>=0.5.dev1",
     "pyOpenSSL>=0.14",
     "python-dateutil",
-    ]
+]
 
-deplinks = [
-    ]
+deplinks = []
 
-setup(name="caramel",
-      version="1.9.2",
-      description="caramel",
-      long_description="""
+setup(
+    name="caramel",
+    version="1.9.2",
+    python_requires=">=3.6",
+    description="caramel",
+    long_description="""
 Caramel is a certificate management system that makes it easy to use client
 certificates in web applications, mobile applications, embedded use and
 other places. It solves the certificate signing and certificate
@@ -35,23 +36,23 @@ CRL endpoints to handle compromised certificates, but only have to stop
 updating the certificate. This also means that expired certificates
 should be considered broken.
       """,
-      classifiers=[
-          "Programming Language :: Python",
-          "Framework :: Pyramid",
-          "Topic :: Internet :: WWW/HTTP",
-          "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
-          ],
-      author="D.S. Ljungmark",
-      author_email="spider@modio.se",
-      url="https://github.com/MyTemp/caramel",
-      keywords="web wsgi bfg pylons pyramid certificates x509 ca cert ssl tls",
-      packages=find_packages(),
-      include_package_data=True,
-      zip_safe=False,
-      test_suite="tests",
-      install_requires=requires,
-      dependency_links=deplinks,
-      entry_points="""\
+    classifiers=[
+        "Programming Language :: Python",
+        "Framework :: Pyramid",
+        "Topic :: Internet :: WWW/HTTP",
+        "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+    ],
+    author="D.S. Ljungmark",
+    author_email="spider@modio.se",
+    url="https://github.com/MyTemp/caramel",
+    keywords="web wsgi bfg pylons pyramid certificates x509 ca cert ssl tls",
+    packages=find_packages(),
+    include_package_data=True,
+    zip_safe=False,
+    test_suite="tests",
+    install_requires=requires,
+    dependency_links=deplinks,
+    entry_points="""\
       [paste.app_factory]
       main = caramel:main
       [console_scripts]
@@ -60,4 +61,4 @@ should be considered broken.
       caramel_ca = caramel.scripts.generate_ca:main
       caramel_autosign = caramel.scripts.autosign:main
       """,
-      )
+)
