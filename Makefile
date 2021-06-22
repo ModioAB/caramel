@@ -94,10 +94,10 @@ $(CLIENT_CERT): $(SERVER_PID) $(AUTOSIGN_PID)
 	@ $(BOLD); echo "Use client-example.sh to upload our CSR, wait for it to \
 	get processed, then call it again to confirm the server stored our CSR";\
 	$(BLR)
-	chmod +x client-example.sh
-	./client-example.sh $(VENV)
+	chmod +x scripts/client-example.sh
+	./scripts/client-example.sh $(VENV)
 	sleep 2s
-	./client-example.sh $(VENV)
+	./scripts/client-example.sh $(VENV)
 	@$(BLR)
 
 # Basic tests that caramel can be installed and run with test data,
