@@ -184,13 +184,13 @@ class TestVerbosity(unittest.TestCase):
     (argument_level, environment, root_level, expected)"""
     VERBOSITY_DATA: tuple = (
         (2, {}, logging.CRITICAL, logging.INFO),
-        (-1, {"CARAMEL_LOG_LEVEL": -1}, logging.CRITICAL, logging.ERROR),
-        (2, {"CARAMEL_LOG_LEVEL": 1}, logging.ERROR, logging.INFO),
-        (2, {"CARAMEL_LOG_LEVEL": 3}, logging.WARNING, logging.DEBUG),
-        (2, {"CARAMEL_LOG_LEVEL": 1}, logging.DEBUG, logging.DEBUG),
-        (2, {"CARAMEL_LOG_LEVEL": 3}, logging.WARNING, logging.DEBUG),
-        (0, {"CARAMEL_LOG_LEVEL": 2}, logging.DEBUG, logging.DEBUG),
-        (0, {"CARAMEL_LOG_LEVEL": 3}, logging.WARNING, logging.DEBUG),
+        (-1, {"CARAMEL_LOG_LEVEL": "ERROR"}, logging.CRITICAL, logging.ERROR),
+        (2, {"CARAMEL_LOG_LEVEL": "WARNING"}, logging.ERROR, logging.INFO),
+        (2, {"CARAMEL_LOG_LEVEL": "DEBUG"}, logging.WARNING, logging.DEBUG),
+        (2, {"CARAMEL_LOG_LEVEL": "WARNING"}, logging.DEBUG, logging.DEBUG),
+        (2, {"CARAMEL_LOG_LEVEL": "DEBUG"}, logging.WARNING, logging.DEBUG),
+        (0, {"CARAMEL_LOG_LEVEL": "INFO"}, logging.DEBUG, logging.DEBUG),
+        (0, {"CARAMEL_LOG_LEVEL": "DEBUG"}, logging.WARNING, logging.DEBUG),
     )
 
     """Data set used for testing config.add_verbosity_argument,
