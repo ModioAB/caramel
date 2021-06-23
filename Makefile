@@ -1,5 +1,5 @@
 #Python3 and virtual environment
-VENV := $(shell mktemp -d)
+VENV := $(shell mktemp -d /tmp/caramel-test.XXXXX)
 PYTHON3 := $(VENV)/bin/python3
 
 # PIDs of background processes
@@ -139,10 +139,9 @@ systest: $(CLIENT_CERT)
 
 
 # Removes the virtual environment created via this makefile,
-# NOTE: since venv is a temporary directory, this will only remove files if
-# 		run after a target, e.g. "make systest clean"
+# NOTE: this will remove all previous virtual environments
 .PHONEY: clean
 clean:
-	@echo "Removing local test virtual environment"; $(BLR)
-	rm -rf $(VENV)
+	@echo "Removing local test virtual environments"; $(BLR)
+	rm -rf /tmp/caramel-test.*
 	@$(BLR)
