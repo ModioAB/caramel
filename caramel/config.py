@@ -32,7 +32,7 @@ def add_inifile_argument(parser, env=None):
     )
 
 
-def add_db_url_argument(parser, env=None):
+def add_db_url_argument(parser):
     """Adds an argument for the URL for the database to a given parser"""
     parser.add_argument(
         "--dburl",
