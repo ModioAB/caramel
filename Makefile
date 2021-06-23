@@ -67,16 +67,8 @@ $(SERVER_PID): $(CA_CERT) $(DB_FILE)
 	@ $(BOLD); echo "Start new caramel server in the background, sleep 2s to \
 	give it time to start";\
 	$(BLR)
-	setsid $(VENV)/bin/pserve tests/caramel_launcher.ini \
-		ca_cert=$(CARAMEL_CA_CERT) \
-		ca_key=$(CARAMEL_CA_KEY) \
-		http_port=6543 \
-		http_host=127.0.0.1 \
-		life_short=48 \
-		life_long=720 \
-		dburl=$(CARAMEL_DBURL) \
-		log_level=INFO\
-		>/dev/null 2>&1 < /dev/null & \
+	chmod +x scripts/caramel_launcher.sh
+	setsid ./scripts/caramel_launcher.sh $(VENV)/bin/pserve >/dev/null 2>&1 < /dev/null & \
 	echo $$! > $(SERVER_PID)
 	sleep 2s
 	@$(BLR)
@@ -108,7 +100,7 @@ systest: export CARAMEL_DBURL = sqlite:///$(DB_FILE)
 systest: export CARAMEL_CA_CERT = $(CA_CERT)
 systest: export CARAMEL_CA_KEY = $(CA_KEY)
 systest: export CARAMEL_CA = 127.0.0.1:6543
-systest: export CARAMEL_LOG_LEVEL = 0
+systest: export CARAMEL_LOG_LEVEL = ERROR
 systest: $(CLIENT_CERT)
 	@kill $(shell cat $(SERVER_PID));\
 	if [ $$? -eq 0 ]; then \
