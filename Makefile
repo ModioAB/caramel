@@ -1,5 +1,5 @@
 #Python3 and virtual environment
-VENV := $(shell mktemp -d)
+VENV := $(shell mktemp -d /tmp/caramel-test.XXXXX)
 PYTHON3 := $(VENV)/bin/python3
 
 # PIDs of background processes
