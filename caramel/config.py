@@ -7,12 +7,12 @@ import argparse
 import logging
 import os
 
-LOG_LEVEL = (
-    logging.ERROR,
-    logging.WARNING,
-    logging.INFO,
-    logging.DEBUG,
-)
+LOG_LEVEL = {
+    "ERROR": logging.ERROR,
+    "WARNING": logging.WARNING,
+    "INFO": logging.INFO,
+    "DEBUG": logging.DEBUG,
+}
 
 
 def add_inifile_argument(parser, env=None):
@@ -162,19 +162,23 @@ def get_db_url(arguments=None, settings=None, required=True):
 
 def get_log_level(argument_level, logger=None, env=None):
     """Calculates the highest verbosity(here inverted) from the argument,
-    environment and root, capping it to between 0-3, returning the log level"""
+    environment and root, capping it to between logging.DEBUG(10)-logging.ERROR(40),
+    returning the log level"""
 
     if env is None:
         env = os.environ
-    env_level = int(env.get("CARAMEL_LOG_LEVEL", 0))
+    env_level_name = env.get("CARAMEL_LOG_LEVEL", "ERROR").upper()
+    env_level = LOG_LEVEL[env_level_name]
 
     if logger is None:
         logger = logging.getLogger()
-    current_level = LOG_LEVEL.index(logger.level) if logger.level in LOG_LEVEL else 0
+    current_level = logger.level
 
-    verbosity = max(argument_level, env_level, current_level)
-    verbosity = min(verbosity, len(LOG_LEVEL) - 1)
-    log_level = LOG_LEVEL[verbosity]
+    argument_verbosity = logging.ERROR - argument_level * 10    # level steps are 10
+    verbosity = min(argument_verbosity, env_level, current_level)
+    log_level = (
+        verbosity if logging.DEBUG <= verbosity <= logging.ERROR else logging.ERROR
+    )
     return log_level
 
 
