@@ -32,9 +32,11 @@ import time
 import uuid
 import concurrent.futures
 
+from caramel.config import (
+    setup_logging,
+)
 from pyramid.paster import (
     bootstrap,
-    setup_logging,
 )
 
 from sqlalchemy import create_engine

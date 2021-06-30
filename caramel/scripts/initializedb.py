@@ -3,10 +3,11 @@
 import argparse
 
 from sqlalchemy import create_engine
-
+from caramel.config import (
+    setup_logging,
+)
 from pyramid.paster import (
     get_appsettings,
-    setup_logging,
 )
 
 import caramel.config as config

@@ -5,7 +5,10 @@
 
 import argparse
 import logging
+from logging.config import dictConfig
 import os
+import pyramid.paster as paster
+from pyramid.scripting import prepare
 
 LOG_LEVEL = (
     logging.ERROR,
@@ -13,6 +16,38 @@ LOG_LEVEL = (
     logging.INFO,
     logging.DEBUG,
 )
+
+DEFAULT_LOGGING_CONFIG = {
+    "version": 1,
+    "formatters": {
+        "generic": {
+            "format": "%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s]"
+            "%(message)s"
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stderr",
+            "level": "NOTSET",
+            "formatter": "generic",
+        },
+    },
+    "loggers": {
+        "": {  # root logger
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "caramel": {
+            "level": "DEBUG",
+            "qualname": "caramel",
+        },
+        "sqlalchemy": {
+            "level": "INFO",
+            "qualname": "sqlalchemy.engine",
+        },
+    },
+}
 
 
 def add_inifile_argument(parser, env=None):
@@ -245,3 +280,12 @@ def get_backdate(
         settings=settings,
         default=default,
     )
+
+
+def setup_logging(config_path=None):
+    """wrapper for pyramid.paster.sertup_logging using file at config.path, if
+    no config_path is passed on use dictionary DEFAULT_LOGGING_CONFIG"""
+    if config_path:
+        paster.setup_logging(config_path)
+    else:
+        dictConfig(DEFAULT_LOGGING_CONFIG)
