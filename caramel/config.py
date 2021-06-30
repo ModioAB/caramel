@@ -67,6 +67,32 @@ def add_ca_arguments(parser):
     )
 
 
+def add_lifetime_arguments(parser):
+    """Adds an argument for the short and long lifetime of certs"""
+    parser.add_argument(
+        "-l",
+        "--life-short",
+        help="Lifetime of short term certs",
+        type=int,
+    )
+    parser.add_argument(
+        "-s",
+        "--life-long",
+        help="Lifetime of long term certs",
+        type=int,
+    )
+
+
+def add_backdate_argument(parser):
+    """Adds an argument to enable backdating certs"""
+    parser.add_argument(
+        "-b",
+        "--backdate",
+        help="Use backdating, default is False",
+        action="store_true",
+    )
+
+
 class CheckInifilePathSet(argparse.Action):
     """An arparse.Action to raise an error if no config file has been
     defined by the user or  in the environment"""
@@ -89,10 +115,12 @@ def _get_config_value(
     required=False,
     setting_name=None,
     settings=None,
+    default=None,
     env=None,
 ):
     """Returns what value to use for a given config variable, prefer argument >
-    env-variable > config-file"""
+    env-variable > config-file, if a value cant be found and default is not
+    None, default is returned"""
     result = None
     if setting_name is None:
         setting_name = variable
@@ -106,6 +134,9 @@ def _get_config_value(
 
     arg_value = getattr(arguments, variable, result)
     result = arg_value if arg_value is not None else result
+
+    if result is None:
+        result = default
 
     if required and result is None:
         raise ValueError(
@@ -173,3 +204,44 @@ def get_ca_cert_key_path(arguments: argparse.Namespace, settings=None, required=
         settings=settings,
     )
     return ca_cert_path, ca_key_path
+
+
+def get_lifetime_short(
+    arguments: argparse.Namespace, settings=None, required=False, default=None
+):
+    """Returns the default lifetime for certs in hours"""
+    return _get_config_value(
+        arguments,
+        variable="life-short",
+        required=required,
+        setting_name="lifetime.short",
+        settings=settings,
+        default=default,
+    )
+
+
+def get_lifetime_long(
+    arguments: argparse.Namespace, settings=None, required=False, default=None
+):
+    """Returns the long term certs lifetime in hours"""
+    return _get_config_value(
+        arguments,
+        variable="life-long",
+        required=required,
+        setting_name="lifetime.long",
+        settings=settings,
+        default=default,
+    )
+
+
+def get_backdate(
+    arguments: argparse.Namespace, settings=None, required=False, default=None
+):
+    """Returns the long term certs lifetime in hours"""
+    return _get_config_value(
+        arguments,
+        variable="backdate",
+        required=required,
+        settings=settings,
+        default=default,
+    )
