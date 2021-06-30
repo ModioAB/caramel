@@ -333,3 +333,11 @@ def bootstrap(config_path=None):
         env["app"] = app
         return env
 
+
+def get_appsettings(config_path):
+    """wrapper for pyramid.paster.get_appsettings, if a config_path is not
+    given then return DEFAULT_APP_SETTINGS"""
+    if config_path:
+        return paster.get_appsettings(config_path)
+    else:
+        return DEFAULT_APP_SETTINGS
