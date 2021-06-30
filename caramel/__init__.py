@@ -2,6 +2,7 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
+from .config import get_db_url
 
 from .models import (
     init_session,
@@ -10,6 +11,7 @@ from .models import (
 
 def main(global_config, **settings):
     """This function returns a Pyramid WSGI application."""
+    settings["sqlalchemy.url"] = get_db_url(settings=settings)
     engine = engine_from_config(settings, "sqlalchemy.")
     init_session(engine)
     config = Configurator(settings=settings)
