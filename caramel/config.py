@@ -92,7 +92,6 @@ def add_inifile_argument(parser, env=None):
         dest="inifile",
         default=default_ini,
         type=str,
-        action=CheckInifilePathSet,
     )
 
 
@@ -155,22 +154,6 @@ def add_backdate_argument(parser):
         help="Use backdating, default is False",
         action="store_true",
     )
-
-
-class CheckInifilePathSet(argparse.Action):
-    """An arparse.Action to raise an error if no config file has been
-    defined by the user or  in the environment"""
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, values)
-        inifile = getattr(namespace, self.dest, None)
-        if inifile is None:
-            raise ValueError(
-                "ENVIRONMENT VARIABLE 'CARAMEL_INI' IS NOT SET\n"
-                " - Set 'CARAMEL_INI' to the absolute path of the config or"
-                " specify a path in the call like so:\n"
-                "\t caramel_initializedb /path/to/config.ini [...]"
-            )
 
 
 def _get_config_value(
