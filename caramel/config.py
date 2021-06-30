@@ -49,6 +49,35 @@ DEFAULT_LOGGING_CONFIG = {
     },
 }
 
+DEFAULT_APP_SETTINGS = {
+    "csrf_trusted_origins": [],
+    "debug_all": False,
+    "debug_authorization": False,
+    "debug_notfound": False,
+    "debug_routematch": False,
+    "debug_templates": False,
+    "default_locale_name": "en",
+    "prevent_cachebust": False,
+    "prevent_http_cache": False,
+    "pyramid.csrf_trusted_origins": [],
+    "pyramid.debug_all": False,
+    "pyramid.debug_authorization": False,
+    "pyramid.debug_notfound": False,
+    "pyramid.debug_routematch": False,
+    "pyramid.debug_templates": False,
+    "pyramid.default_locale_name": "en",
+    "pyramid.prevent_cachebust": False,
+    "pyramid.prevent_http_cache": False,
+    "pyramid.reload_all": False,
+    "pyramid.reload_assets": False,
+    "pyramid.reload_resources": False,
+    "pyramid.reload_templates": True,
+    "reload_all": False,
+    "reload_assets": False,
+    "reload_resources": False,
+    "reload_templates": True,
+}
+
 
 def add_inifile_argument(parser, env=None):
     """Adds an argument to the parser for the config-file, defaults to
@@ -289,3 +318,18 @@ def setup_logging(config_path=None):
         paster.setup_logging(config_path)
     else:
         dictConfig(DEFAULT_LOGGING_CONFIG)
+
+
+def bootstrap(config_path=None):
+    """wrapper for pyramid.paster.bootstraper, if a config_path is not given
+    then DEFAULT_APP_SETTINGS to bootstrap the app manually"""
+    if config_path:
+        return paster.bootstrap(config_path)
+    else:
+        from caramel import main as get_app
+
+        app = get_app({}, **DEFAULT_APP_SETTINGS)
+        env = prepare()
+        env["app"] = app
+        return env
+

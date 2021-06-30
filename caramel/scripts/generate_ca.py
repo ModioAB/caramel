@@ -8,8 +8,6 @@ import os
 import OpenSSL.crypto as _crypto
 from caramel.config import (
     setup_logging,
-)
-from pyramid.paster import (
     bootstrap,
 )
 from caramel import config

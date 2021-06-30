@@ -34,8 +34,6 @@ import concurrent.futures
 
 from caramel.config import (
     setup_logging,
-)
-from pyramid.paster import (
     bootstrap,
 )
 
