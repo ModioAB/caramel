@@ -17,6 +17,9 @@ workflow:
   #     when: never
   #   - if: $CI_COMMIT_TAG
   #   - if: $CI_COMMIT_BRANCH
+default:
+  tags:
+    ~
 
 stages:
   - test
