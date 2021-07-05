@@ -30,6 +30,13 @@ caramel:test:
     - pip3 install .
   script:
     - python3 -m unittest discover
+
+caramel:systest:
+  stage: test
+  image: ${BUILD_IMAGE}
+  before_script:
+    - pip3 install .
+  script:
     - make systest
 
 rebase:test:
