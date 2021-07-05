@@ -67,6 +67,25 @@ caramel:flake:
   script:
     - flake8 caramel/ tests/
 
+caramel:mypy:
+  stage: test
+  when: always
+  image: ${PYTHON_IMAGE}
+  before_script:
+    - pip3 install mypy "sqlalchemy[mypy]"
+  script:
+    - mypy --install-types --non-interactive --config-file=setup.cfg caramel/ tests/
+
+caramel:pylint:
+  stage: test
+  when: always
+  image: ${PYTHON_IMAGE}
+  before_script:
+    - pip3 install pylint pylint-exit
+    - python3 setup.py develop
+  script:
+      - pylint --rcfile=setup.cfg caramel/ tests/ || pylint-exit --error-fail $?
+
 rebase:check:
   extends: .rebase
   stage: rebase
