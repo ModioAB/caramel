@@ -4,7 +4,7 @@
 import argparse
 
 from caramel import config
-from pyramid.paster import bootstrap
+from caramel.config import bootstrap
 from pyramid.settings import asbool
 from sqlalchemy import create_engine
 from dateutil.relativedelta import relativedelta

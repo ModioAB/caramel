@@ -45,14 +45,6 @@ class TestConfig(unittest.TestCase):
 
         self.assertEqual(args.inifile, my_ini)
 
-    def test_no_ini_path(self):
-        """no path in either argument or evironment, should raise ValueError"""
-        parser = argparse.ArgumentParser()
-        config.add_inifile_argument(parser, {})
-
-        with self.assertRaises(ValueError):
-            parser.parse_args([])
-
 
 class TestGetConfigValue(unittest.TestCase):
     """Tests for caramel.config._get_config_value"""

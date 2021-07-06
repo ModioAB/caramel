@@ -5,7 +5,10 @@
 
 import argparse
 import logging
+from logging.config import dictConfig
 import os
+import pyramid.paster as paster
+from pyramid.scripting import prepare
 
 LOG_LEVEL = (
     logging.ERROR,
@@ -13,6 +16,67 @@ LOG_LEVEL = (
     logging.INFO,
     logging.DEBUG,
 )
+
+DEFAULT_LOGGING_CONFIG = {
+    "version": 1,
+    "formatters": {
+        "generic": {
+            "format": "%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s]"
+            "%(message)s"
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stderr",
+            "level": "NOTSET",
+            "formatter": "generic",
+        },
+    },
+    "loggers": {
+        "": {  # root logger
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "caramel": {
+            "level": "DEBUG",
+            "qualname": "caramel",
+        },
+        "sqlalchemy": {
+            "level": "INFO",
+            "qualname": "sqlalchemy.engine",
+        },
+    },
+}
+
+DEFAULT_APP_SETTINGS = {
+    "csrf_trusted_origins": [],
+    "debug_all": False,
+    "debug_authorization": False,
+    "debug_notfound": False,
+    "debug_routematch": False,
+    "debug_templates": False,
+    "default_locale_name": "en",
+    "prevent_cachebust": False,
+    "prevent_http_cache": False,
+    "pyramid.csrf_trusted_origins": [],
+    "pyramid.debug_all": False,
+    "pyramid.debug_authorization": False,
+    "pyramid.debug_notfound": False,
+    "pyramid.debug_routematch": False,
+    "pyramid.debug_templates": False,
+    "pyramid.default_locale_name": "en",
+    "pyramid.prevent_cachebust": False,
+    "pyramid.prevent_http_cache": False,
+    "pyramid.reload_all": False,
+    "pyramid.reload_assets": False,
+    "pyramid.reload_resources": False,
+    "pyramid.reload_templates": True,
+    "reload_all": False,
+    "reload_assets": False,
+    "reload_resources": False,
+    "reload_templates": True,
+}
 
 
 def add_inifile_argument(parser, env=None):
@@ -28,7 +92,6 @@ def add_inifile_argument(parser, env=None):
         dest="inifile",
         default=default_ini,
         type=str,
-        action=CheckInifilePathSet,
     )
 
 
@@ -91,22 +154,6 @@ def add_backdate_argument(parser):
         help="Use backdating, default is False",
         action="store_true",
     )
-
-
-class CheckInifilePathSet(argparse.Action):
-    """An arparse.Action to raise an error if no config file has been
-    defined by the user or  in the environment"""
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, values)
-        inifile = getattr(namespace, self.dest, None)
-        if inifile is None:
-            raise ValueError(
-                "ENVIRONMENT VARIABLE 'CARAMEL_INI' IS NOT SET\n"
-                " - Set 'CARAMEL_INI' to the absolute path of the config or"
-                " specify a path in the call like so:\n"
-                "\t caramel_initializedb /path/to/config.ini [...]"
-            )
 
 
 def _get_config_value(
@@ -245,3 +292,35 @@ def get_backdate(
         settings=settings,
         default=default,
     )
+
+
+def setup_logging(config_path=None):
+    """wrapper for pyramid.paster.sertup_logging using file at config.path, if
+    no config_path is passed on use dictionary DEFAULT_LOGGING_CONFIG"""
+    if config_path:
+        paster.setup_logging(config_path)
+    else:
+        dictConfig(DEFAULT_LOGGING_CONFIG)
+
+
+def bootstrap(config_path=None):
+    """wrapper for pyramid.paster.bootstraper, if a config_path is not given
+    then DEFAULT_APP_SETTINGS to bootstrap the app manually"""
+    if config_path:
+        return paster.bootstrap(config_path)
+    else:
+        from caramel import main as get_app
+
+        app = get_app({}, **DEFAULT_APP_SETTINGS)
+        env = prepare()
+        env["app"] = app
+        return env
+
+
+def get_appsettings(config_path):
+    """wrapper for pyramid.paster.get_appsettings, if a config_path is not
+    given then return DEFAULT_APP_SETTINGS"""
+    if config_path:
+        return paster.get_appsettings(config_path)
+    else:
+        return DEFAULT_APP_SETTINGS

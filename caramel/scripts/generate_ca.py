@@ -6,9 +6,9 @@ import argparse
 import uuid
 import os
 import OpenSSL.crypto as _crypto
-from pyramid.paster import (
-    bootstrap,
+from caramel.config import (
     setup_logging,
+    bootstrap,
 )
 from caramel import config
 
