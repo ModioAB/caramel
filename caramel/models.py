@@ -91,7 +91,7 @@ register(DBSession)
 @as_declarative()
 class Base(object):
     @declared_attr  # type: ignore
-    def __tablename__(cls) -> str:
+    def __tablename__(cls) -> str:  # pylint: disable=no-self-argument
         return cls.__name__.lower() # pylint: disable=no-member
 
     id = _sa.Column(_sa.Integer, primary_key=True)
