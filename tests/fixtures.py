@@ -55,6 +55,9 @@ class CSRFixture(AttributeCollection, SimilarityComparable):
         "accessed",
         "certificates",
     )
+    commonname: str
+    pem: str
+    certificates: list
 
     @property
     def _match_excluded_attrs_(self):
@@ -88,6 +91,11 @@ class CSRFixture(AttributeCollection, SimilarityComparable):
 
 
 class CertificateFixture(AttributeCollection, SimilarityComparable):
+    not_before: datetime
+    not_after: datetime
+    common_subject: tuple
+    pem: str
+
     def __call__(self, csr):
         # FIXME: adjust when models.Certificate gets a proper __init__
         cert = models.Certificate(csr, self.pem)
@@ -98,6 +106,10 @@ class CertificateFixture(AttributeCollection, SimilarityComparable):
 
 
 class AccessLogFixture(AttributeCollection, SimilarityComparable):
+    when: datetime
+    addr: str
+    pem: str
+
     def __call__(self, csr):
         access = models.AccessLog(csr, self.addr)
         access.when = self.when
