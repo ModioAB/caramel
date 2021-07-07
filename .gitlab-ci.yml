@@ -29,7 +29,7 @@ caramel:test:
   before_script:
     - pip3 install .
   script:
-    - python3 -m unittest discover
+    - python3 -W error::DeprecationWarning -m unittest discover
 
 caramel:systest:
   stage: test
