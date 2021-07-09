@@ -303,9 +303,11 @@ def setup_logging(config_path=None):
         dictConfig(DEFAULT_LOGGING_CONFIG)
 
 
-def bootstrap(config_path=None):
+def bootstrap(config_path=None, dburl=None):
     """wrapper for pyramid.paster.bootstraper, if a config_path is not given
     then DEFAULT_APP_SETTINGS to bootstrap the app manually"""
+    if dburl:
+        os.environ["CARAMEL_DBURL"] = dburl
     if config_path:
         return paster.bootstrap(config_path)
     else:
