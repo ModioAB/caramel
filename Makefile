@@ -59,7 +59,7 @@ $(CARAMEL_TOOL): $(PYTHON3) setup.py
 gen-db%: $(CARAMEL_TOOL)
 	@$(BOLD); echo "Create a new DB at $(DB_FILE)";\
 	$(BLR);
-	$(VENV)/bin/caramel_initialize_db
+	$(VENV)/bin/caramel_initialize_db $(CARAMEL_COMMAND_LINE)
 	@$(BLR)
 
 # Generate a new CA cert and key pair
@@ -67,7 +67,7 @@ gen-db%: $(CARAMEL_TOOL)
 ca-cert%: $(CARAMEL_TOOL)
 	@$(BOLD); echo "Generate new CA cert and key with tests/ca_test_input.txt";\
 	$(BLR)
-	$(VENV)/bin/caramel_ca < tests/ca_test_input.txt
+	$(VENV)/bin/caramel_ca $(CARAMEL_COMMAND_LINE) < tests/ca_test_input.txt
 	@$(BLR)
 
 # Start caramel using pserve in the background, save PID to SERVER
@@ -80,6 +80,7 @@ $(SERVER)-env.pid: ca-cert-env gen-db-env
 	echo $$! > $(SERVER)-env.pid
 	sleep 2s
 	@$(BLR)
+
 
 # Start caramel using pserve in the background, save PID to SERVER
 $(SERVER)-in%.pid: ca-cert-in% gen-db-in%
@@ -111,9 +112,15 @@ client-run%: $(SERVER)%.pid $(AUTOSIGN)%.pid
 	./scripts/client-example.sh $(VENV)
 	@$(BLR)
 
+
 # Basic tests that caramel can be installed and run with test data,
+.PHONY: systest%
+systest: systest-env systest-ini systest-ini-env systest-ini-commandline
+	@ $(PASS); $(LINE);\
+	echo "Systest passed"; \
+	$(BLR)
+
 # using environment variables for config
-.PHONY: systest-env
 systest-env: export CARAMEL_COMMAND_LINE =
 systest-env: export CARAMEL_DBURL = $(DB_URL)
 systest-env: export CARAMEL_CA_CERT = $(CA_CERT)
@@ -121,6 +128,23 @@ systest-env: export CARAMEL_CA_KEY = $(CA_KEY)
 systest-env: export CARAMEL_HOST = 127.0.0.1
 systest-env: export CARAMEL_PORT = 6543
 systest-env: export CARAMEL_LOG_LEVEL = ERROR
+
+# using only .ini-file for config on the command line
+systest-ini: export CARAMEL_COMMAND_LINE = $(VENV)/development.ini
+
+# using only .ini-file for config for server, rest ini from env
+systest-ini-env: export CARAMEL_INI = $(VENV)/development.ini
+$(SERVER)-ini-env.pid: export CARAMEL_COMMAND_LINE = $(VENV)/development.ini
+$(AUTOSIGN)-db-ini-env.pid: export CARAMEL_COMMAND_LINE =
+ca-cert-ini-env: export CARAMEL_COMMAND_LINE =
+gen-db-ini-env: export CARAMEL_COMMAND_LINE =
+
+# using only .ini-file for config for server, rest commandline
+$(SERVER)-ini-commandline.pid: export CARAMEL_COMMAND_LINE = $(VENV)/development.ini
+$(AUTOSIGN)-ini-commandline.pid: export CARAMEL_COMMAND_LINE = --dburl=$(DB_URL) --ca-cert="$(CA_CERT)" --ca-key="$(CA_KEY)"
+ca-cert-ini-commandline: export CARAMEL_COMMAND_LINE = --ca-cert="$(CA_CERT)" --ca-key="$(CA_KEY)"
+gen-db-ini-commandline: export CARAMEL_COMMAND_LINE = --dburl $(DB_URL)
+
 systest-%: client-run-%
 	@kill $(shell cat $(SERVER)-$*.pid);\
 	if [ $$? -eq 0 ]; then \
