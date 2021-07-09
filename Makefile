@@ -26,6 +26,9 @@ LINE := $(BOLD); echo "---------------------------------------"
 RESET_TERM := printf "\033[0m"
 BLR := $(BOLD); $(LINE); $(RESET_TERM) #Bold Line, Reset formatting
 
+# Make sure we dont use any exsisting env vars
+unexport CARAMEL_INI CARAMEL_CA_CERT CARAMEL_CA_KEY CARAMEL_DBURL CARAMEL_HOST CARAMEL_PORT CARAMEL_LOG_LEVEL
+
 #Check for python3 install and virtual environment
 $(PYTHON3):
 	@if [ -z python3 ]; then \
