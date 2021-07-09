@@ -8,9 +8,9 @@ AUTOSIGN := $(VENV)/autosign
 
 # Database and CA cert and key for caramel server to use
 DB_FILE := $(VENV)/caramel.sqlite
-CA_CERT := $(VENV)/caramel.ca.cert
-CA_KEY := $(VENV)/caramel.ca.key
 DB_URL := sqlite:///$(DB_FILE)
+CA_CERT := $(VENV)/example_ca/caramel.ca.cert
+CA_KEY := $(VENV)/example_ca/caramel.ca.key
 
 # client.crt will be generated if the server correctly gives our stored CSR back
 CLIENT_CERT := $(VENV)/client.crt
@@ -50,6 +50,8 @@ $(CARAMEL_TOOL): $(PYTHON3) setup.py
 	@$(BOLD); echo "Install caramel and its dependencies in venv: $(VENV)";\
 	$(BLR);
 	$(VENV)/bin/pip3 install -e .
+	cp development.ini $(VENV)/development.ini
+	mkdir $(VENV)/example_ca
 	@$(BLR)
 
 # Create a sqlite-db configured for use with caramel
