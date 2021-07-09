@@ -238,14 +238,14 @@ def get_ca_cert_key_path(arguments: argparse.Namespace, settings=None, required=
     """Returns the path to the ca-cert and ca-key to use"""
     ca_cert_path = _get_config_value(
         arguments,
-        variable="ca-cert",
+        variable="ca_cert",
         required=required,
         setting_name="ca.cert",
         settings=settings,
     )
     ca_key_path = _get_config_value(
         arguments,
-        variable="ca-key",
+        variable="ca_key",
         required=required,
         setting_name="ca.key",
         settings=settings,
@@ -259,7 +259,7 @@ def get_lifetime_short(
     """Returns the default lifetime for certs in hours"""
     return _get_config_value(
         arguments,
-        variable="life-short",
+        variable="life_short",
         required=required,
         setting_name="lifetime.short",
         settings=settings,
@@ -273,7 +273,7 @@ def get_lifetime_long(
     """Returns the long term certs lifetime in hours"""
     return _get_config_value(
         arguments,
-        variable="life-long",
+        variable="life_long",
         required=required,
         setting_name="lifetime.long",
         settings=settings,
