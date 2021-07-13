@@ -113,7 +113,7 @@ def main():
     setup_logging(config_path)
     config.configure_log_level(args)
 
-    env = bootstrap(config_path)
+    env = bootstrap(config_path, dburl=args.dburl)
     settings, closer = env["registry"].settings, env["closer"]
 
     db_url = config.get_db_url(args, settings)

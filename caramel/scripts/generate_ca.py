@@ -8,7 +8,7 @@ import os
 import OpenSSL.crypto as _crypto
 from caramel.config import (
     setup_logging,
-    bootstrap,
+    get_appsettings,
 )
 from caramel import config
 
@@ -206,20 +206,17 @@ def main():
     setup_logging(config_path)
     config.configure_log_level(args)
 
-    env = bootstrap(config_path)
-    settings, closer = env["registry"].settings, env["closer"]
+    settings = get_appsettings(config_path)
 
     try:
         ca_cert_path, ca_key_path = config.get_ca_cert_key_path(args, settings)
     except ValueError as error:
         print(error)
-        closer()
         exit()
 
     for f in ca_cert_path, ca_key_path:
         if os.path.exists(f):
             print("File already exists: {}. Refusing to corrupt.".format(f))
-            closer()
             exit()
         else:
             dname = os.path.dirname(f)

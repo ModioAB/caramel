@@ -199,7 +199,7 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
 
 def main():
     args = cmdline()
-    env = bootstrap(args.inifile)
+    env = bootstrap(args.inifile, dburl=args.dburl)
     settings, closer = env["registry"].settings, env["closer"]
     db_url = config.get_db_url(args, settings)
     engine = create_engine(db_url)
