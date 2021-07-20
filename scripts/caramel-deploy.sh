@@ -12,7 +12,7 @@ trap "rm -rf $TMPDIR" EXIT
 REV=$(git rev-parse --verify --short HEAD)
 (git archive HEAD | tar -f - -xC "$TMPDIR")
 rsync -vr "$TMPDIR/" "$SERVER:/srv/$SERVER/$PROJECT-$REV"
-ssh -t "$SERVER" "/srv/$SERVER/$PROJECT-$REV/post-deploy.sh" "$PROJECT" "$REV"
+ssh -t "$SERVER" "/srv/$SERVER/$PROJECT-$REV/scripts/post-deploy.sh" "$PROJECT" "$REV"
 
 ## All done
 echo "**** All worked.  Python has been restarted for the webserver"
