@@ -13,11 +13,8 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
 )
 
-import transaction
 
 from caramel.models import (
-    init_session,
-    DBSession,
     CSR,
     AccessLog,
 )
@@ -183,30 +180,3 @@ class TestCertFetch(ModelTestCase):
             csr.accessed[0].when, now, delta=datetime.timedelta(seconds=1)
         )
         pass
-
-
-@unittest.skip("Example test case from scaffold, barely altered.")
-class TestMyView(unittest.TestCase):
-    def setUp(self):
-        self.config = testing.setUp()
-        from sqlalchemy import create_engine
-
-        engine = create_engine("sqlite://")
-        init_session(engine, create=True)
-        from caramel.models import MyModel
-
-        with transaction.manager:
-            model = MyModel(name="one", value=55)
-            model.save()
-
-    def tearDown(self):
-        DBSession.remove()
-        testing.tearDown()
-
-    def test_it(self):
-        from caramel.views import my_view
-
-        request = testing.DummyRequest()
-        info = my_view(request)
-        self.assertEqual(info["one"].name, "one")
-        self.assertEqual(info["project"], "caramel")

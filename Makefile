@@ -18,11 +18,11 @@ CLIENT_CERT := $(VENV)/client.crt
 CARAMEL_TOOL := $(VENV)/bin/caramel_tool
 
 # Terminal formatting
-BOLD := tput bold
-PASS := $(BOLD); tput setaf 2
-FAIL := $(BOLD); tput setaf 1
-LINE := echo "---------------------------------------"
-RESET_TERM := tput op; tput sgr0
+BOLD := printf "\033[1m"
+PASS := $(BOLD); printf "\033[32m"
+FAIL := $(BOLD); printf "\033[31m"
+LINE := $(BOLD); echo "---------------------------------------"
+RESET_TERM := printf "\033[0m"
 BLR := $(BOLD); $(LINE); $(RESET_TERM) #Bold Line, Reset formatting
 
 #Check for python3 install and virtual environment
