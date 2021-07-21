@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 requires = [
     "pyramid",
-    "SQLAlchemy >= 1.1",
+    "SQLAlchemy >= 1.4",
     "transaction",
     "pyramid_tm",
     "zope.sqlalchemy >= 1.3",
