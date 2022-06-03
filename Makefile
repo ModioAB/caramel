@@ -72,24 +72,24 @@ ca-cert%: $(CARAMEL_TOOL)
 
 # Start caramel using pserve in the background, save PID to SERVER
 $(SERVER)-env.pid: ca-cert-env gen-db-env
-	@ $(BOLD); echo "Start new caramel server in the background, sleep 2s to \
+	@ $(BOLD); echo "Start new caramel server in the background, sleep 5s to \
 	give it time to start";\
 	$(BLR)
 	chmod +x scripts/caramel_launcher.sh
 	setsid ./scripts/caramel_launcher.sh $(VENV)/bin/pserve >/dev/null 2>&1 < /dev/null & \
 	echo $$! > $(SERVER)-env.pid
-	sleep 2s
+	sleep 5s
 	@$(BLR)
 
 
 # Start caramel using pserve in the background, save PID to SERVER
 $(SERVER)-in%.pid: ca-cert-in% gen-db-in%
-	@ $(BOLD); echo "Start new caramel server in the background, sleep 2s to \
+	@ $(BOLD); echo "Start new caramel server in the background, sleep 5s to \
 	give it time to start";\
 	$(BLR)
 	setsid $(VENV)/bin/pserve $(CARAMEL_COMMAND_LINE) >/dev/null 2>&1 < /dev/null & \
 	echo $$! > $(SERVER)-in$*.pid
-	sleep 2s
+	sleep 5s
 	@$(BLR)
 
 # Start caramel_autosign in the background, save PID to ENV_AUTOSIGN
