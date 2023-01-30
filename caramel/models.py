@@ -2,7 +2,8 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 import sqlalchemy as _sa
-from sqlalchemy.ext.declarative import declared_attr, as_declarative
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import as_declarative
 import sqlalchemy.orm as _orm
 from zope.sqlalchemy import register
 
@@ -119,11 +120,15 @@ class CSR(Base):
     commonname = _sa.Column(_sa.String(_UB_CN_LEN))
     rejected = _sa.Column(_sa.Boolean(create_constraint=True))
     accessed: List["AccessLog"] = _orm.relationship(
-        "AccessLog", backref="csr", order_by="AccessLog.when.desc()"
+        "AccessLog",
+        backref="csr",
+        cascade_backrefs=False,
+        order_by="AccessLog.when.desc()",
     )
     certificates: List["Certificate"] = _orm.relationship(
         "Certificate",
         backref="csr",
+        cascade_backrefs=False,
         order_by="Certificate.not_after.desc()",
         lazy="dynamic",
         cascade="all, delete-orphan",
@@ -191,14 +196,14 @@ class CSR(Base):
 
         # Options subqueryload is to prevent thousands of small queries and
         # instead batch load the certificates at once
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query().filter_by(rejected=False).filter(CSR.id.in_(all_signed)).all()
         )
 
     @classmethod
     def unsigned(cls):
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query()
             .filter_by(rejected=False)
