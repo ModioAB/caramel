@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 requires = [
     "pyramid",
-    "SQLAlchemy >= 1.4",
+    "SQLAlchemy ~= 1.4.32",
     "transaction",
     "pyramid_tm",
     "zope.sqlalchemy >= 1.3",
@@ -16,7 +16,7 @@ deplinks = []
 
 setup(
     name="caramel",
-    version="1.9.2",
+    version="1.9.3",
     python_requires=">=3.6",
     description="caramel",
     long_description="""

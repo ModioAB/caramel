@@ -72,7 +72,7 @@ caramel:mypy:
   when: always
   image: ${PYTHON_IMAGE}
   before_script:
-    - pip3 install mypy "sqlalchemy[mypy]"
+    - python3 -m pip install mypy "sqlalchemy[mypy]<2"
   script:
     - mypy --install-types --non-interactive --config-file=setup.cfg caramel/ tests/
 
