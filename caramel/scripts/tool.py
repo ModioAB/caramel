@@ -79,8 +79,10 @@ def cmdline():
     return args
 
 
-def error_out(message):
+def error_out(message, exc=None):
     print(message)
+    if exc is not None:
+        print(str(exc))
     sys.exit(1)
 
 
@@ -184,8 +186,8 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         try:
             csrlist = models.CSR.refreshable()
-        except Exception as ex:
-            error_out(f"Not found or some other error {ex}")
+        except Exception as exc:
+            error_out("Not found or some other error", exc=exc)
         futures = (
             executor.submit(refresh, csr, ca, lifetime_short, lifetime_long, backdate)
             for csr in csrlist
@@ -215,7 +217,7 @@ def main():
     try:
         ca_cert_path, ca_key_path = config.get_ca_cert_key_path(args, settings)
     except ValueError as error:
-        error_out(str(error))
+        error_out("Error reading ca data", exc=error)
 
     ca = models.SigningCert.from_files(ca_cert_path, ca_key_path)
 
