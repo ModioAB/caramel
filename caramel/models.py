@@ -22,17 +22,6 @@ HASH = {1024: "sha1", 2048: "sha256", 4096: "sha512"}
 CA_SUBJ_MATCH = (b"C", b"ST", b"L", b"O")
 
 
-def _crypto_patch():
-    """hijack _crypto internal lib and violate the default text encoding.
-    https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
-    https://github.com/pyca/pyopenssl/issues/129 is an open issue
-    about it."""
-    _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
-
-
-_crypto_patch()
-
-
 class SigningCert(object):
     """Data class to wrap signing key + cert, to help refactoring"""
 
