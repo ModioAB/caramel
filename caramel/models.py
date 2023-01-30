@@ -10,7 +10,8 @@ import OpenSSL.crypto as _crypto
 import sqlalchemy as _sa
 import sqlalchemy.orm as _orm
 from pyramid.decorator import reify as _reify
-from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import as_declarative
 from zope.sqlalchemy import register
 
 X509_V3 = 0x2  # RFC 2459, 4.1.2.1
@@ -119,11 +120,15 @@ class CSR(Base):
     commonname = _sa.Column(_sa.String(_UB_CN_LEN))
     rejected = _sa.Column(_sa.Boolean(create_constraint=True))
     accessed: List["AccessLog"] = _orm.relationship(
-        "AccessLog", backref="csr", order_by="AccessLog.when.desc()"
+        "AccessLog",
+        backref="csr",
+        cascade_backrefs=False,
+        order_by="AccessLog.when.desc()",
     )
     certificates: List["Certificate"] = _orm.relationship(
         "Certificate",
         backref="csr",
+        cascade_backrefs=False,
         order_by="Certificate.not_after.desc()",
         lazy="dynamic",
         cascade="all, delete-orphan",
@@ -191,14 +196,14 @@ class CSR(Base):
 
         # Options subqueryload is to prevent thousands of small queries and
         # instead batch load the certificates at once
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query().filter_by(rejected=False).filter(CSR.id.in_(all_signed)).all()
         )
 
     @classmethod
     def unsigned(cls):
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query()
             .filter_by(rejected=False)
