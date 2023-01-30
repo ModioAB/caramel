@@ -185,8 +185,8 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         try:
             csrlist = models.CSR.refreshable()
-        except Exception:
-            error_out("Not found or some other error")
+        except Exception as ex:
+            error_out(f"Not found or some other error {ex}")
         futures = (
             executor.submit(refresh, csr, ca, lifetime_short, lifetime_long, backdate)
             for csr in csrlist
@@ -194,8 +194,8 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
         for future in concurrent.futures.as_completed(futures):
             try:
                 future.result()
-            except Exception:
-                print("Future failed")
+            except Exception as ex:
+                print("Future failed", str(ex))
 
 
 def main():
