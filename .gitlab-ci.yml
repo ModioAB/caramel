@@ -29,7 +29,7 @@ caramel:test:
   stage: test
   image: ${PYTHON_IMAGE}
   before_script:
-    - pip3 install .
+    - python3 -m pip install .
   script:
     - python3 -W error::DeprecationWarning -m unittest discover
 
@@ -37,7 +37,7 @@ caramel:systest:
   stage: test
   image: ${BUILD_IMAGE}
   before_script:
-    - pip3 install .
+    - python3 -m pip install .
   script:
     - make systest
 
@@ -47,9 +47,9 @@ rebase:test:
   needs:
     - caramel:test
   script:
-    - pip3 install .
+    - python3 -m pip install .
     - git every
-      -x 'pip3 install --editable .'
+      -x 'python3 -m pip install --editable .'
       -x 'flake8 caramel/ tests/'
       -x 'black --check caramel/ tests/'
 
@@ -57,7 +57,7 @@ caramel:black:
   stage: test
   image: ${PYTHON_IMAGE}
   before_script:
-    - pip3 install black
+    - python3 -m pip install black
   script:
     - black --check --diff caramel/ tests/
 
@@ -65,7 +65,7 @@ caramel:flake:
   stage: test
   image: ${PYTHON_IMAGE}
   before_script:
-    - pip3 install flake8
+    - python3 -m pip install flake8
   script:
     - flake8 caramel/ tests/
 
@@ -83,7 +83,7 @@ caramel:pylint:
   when: always
   image: ${PYTHON_IMAGE}
   before_script:
-    - pip3 install pylint pylint-exit
+    - python3 -m pip install pylint pylint-exit
     - python3 setup.py develop
   script:
       - pylint --rcfile=setup.cfg caramel/ tests/ || pylint-exit --error-fail $?
@@ -98,6 +98,6 @@ rebase:check:
     - python3 -m pip install black flake8
     # Always install "." first to track possible dependency changes
     - git every
-      -x 'pip3 install --editable .'
+      -x 'python3 -m pip install --editable .'
       -x 'flake8 caramel/ tests/'
       -x 'black --check caramel/ tests/'
