@@ -4,9 +4,9 @@
 SCRIPT_HOME="$(dirname "$(realpath "$0")")"
 
 if [ -z "$1" ]; then
-  PSERVE=$1
-else
   PSERVE=pserve
+else
+  PSERVE=$1
 fi
 
 exec $PSERVE "${SCRIPT_HOME}/caramel_launcher.ini" \

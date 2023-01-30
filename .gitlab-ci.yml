@@ -38,6 +38,7 @@ caramel:systest:
   image: ${BUILD_IMAGE}
   before_script:
     - python3 -m pip install .
+    - dnf -y install openssl
   script:
     - make systest
 
