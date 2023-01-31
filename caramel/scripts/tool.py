@@ -4,6 +4,7 @@
 import argparse
 import concurrent.futures
 import datetime
+import logging
 import sys
 
 import transaction
@@ -11,9 +12,9 @@ from dateutil.relativedelta import relativedelta
 from pyramid.settings import asbool
 from sqlalchemy import create_engine
 
-import caramel.models as models
-from caramel import config
-from caramel.config import bootstrap
+from caramel import config, models
+
+LOG = logging.getLogger(name="caramel.tool")
 
 
 def cmdline():
@@ -81,9 +82,9 @@ def cmdline():
 
 
 def error_out(message, exc=None):
-    print(message)
+    LOG.error(message)
     if exc is not None:
-        print(str(exc))
+        LOG.error(str(exc))
     sys.exit(1)
 
 
@@ -197,12 +198,14 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
             try:
                 future.result()
             except Exception as ex:
-                print("Future failed", str(ex))
+                LOG.error("Future failed: %s", ex)
 
 
 def main():
+    """Entrypoint of application."""
     args = cmdline()
-    env = bootstrap(args.inifile, dburl=args.dburl)
+    logging.basicConfig(format="%(message)s", level=logging.WARNING)
+    env = config.bootstrap(args.inifile, dburl=args.dburl)
     settings, closer = env["registry"].settings, env["closer"]
     db_url = config.get_db_url(args, settings)
     engine = create_engine(db_url)
