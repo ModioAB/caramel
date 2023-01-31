@@ -203,7 +203,9 @@ def csr_resign(ca_cert, lifetime_short, lifetime_long, backdate):
         except Exception as exc:  # pylint:disable=broad-except
             error_out("Not found or some other error", exc=exc)
         futures = (
-            executor.submit(refresh, csr, ca_cert, lifetime_short, lifetime_long, backdate)
+            executor.submit(
+                refresh, csr, ca_cert, lifetime_short, lifetime_long, backdate
+            )
             for csr in csrlist
         )
         for future in concurrent.futures.as_completed(futures):
