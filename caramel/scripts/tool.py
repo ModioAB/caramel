@@ -117,22 +117,22 @@ def calc_lifetime(lifetime=relativedelta(hours=24)):
 def csr_wipe(csr_id):
     """Wipe a certain csr."""
     with transaction.manager:
-        CSR = models.CSR.query().get(csr_id)
-        if not CSR:
+        csr = models.CSR.query().get(csr_id)
+        if not csr:
             error_out("ID not found")
-        CSR.certificates = []
-        CSR.save()
+        csr.certificates = []
+        csr.save()
 
 
 def csr_clean(csr_id):
     """Clean out old certs."""
     with transaction.manager:
-        CSR = models.CSR.query().get(csr_id)
-        if not CSR:
+        csr = models.CSR.query().get(csr_id)
+        if not csr:
             error_out("ID not found")
-        certs = [CSR.certificates.first()]
-        CSR.certificates = certs
-        CSR.save()
+        certs = [csr.certificates.first()]
+        csr.certificates = certs
+        csr.save()
 
 
 def clean_all():
@@ -145,24 +145,23 @@ def clean_all():
 def csr_reject(csr_id):
     """Reject a request."""
     with transaction.manager:
-        CSR = models.CSR.query().get(csr_id)
-        if not CSR:
+        csr = models.CSR.query().get(csr_id)
+        if not csr:
             error_out("ID not found")
+        csr.rejected = True
+        csr.save()
 
-        CSR.rejected = True
-        CSR.save()
 
-
-def csr_sign(csr_id, ca, timedelta, backdate):
+def csr_sign(csr_id, ca_cert, timedelta, backdate):
     """Sign a request with ca, valid for timedelta, or backdate as well."""
     with transaction.manager:
-        CSR = models.CSR.query().get(csr_id)
-        if not CSR:
+        csr = models.CSR.query().get(csr_id)
+        if not csr:
             error_out("ID not found")
-        if CSR.rejected:
+        if csr.rejected:
             error_out("Refusing to sign rejected ID")
 
-        cert = CSR.certificates.first()
+        cert = csr.certificates.first()
         if cert:
             today = datetime.datetime.utcnow()
             cur_lifetime = cert.not_after - cert.not_before
@@ -177,25 +176,25 @@ def csr_sign(csr_id, ca, timedelta, backdate):
                 )
                 error_out(msg.format(cur_lifetime, timedelta))
 
-        cert = models.Certificate.sign(CSR, ca, timedelta, backdate)
+        cert = models.Certificate.sign(csr, ca_cert, timedelta, backdate)
         cert.save()
 
 
-def refresh(csr, ca, lifetime_short, lifetime_long, backdate):
+def refresh(csr, ca_cert, lifetime_short, lifetime_long, backdate):
     """Refresh a single csr."""
     last = csr.certificates.first()
     old_lifetime = last.not_after - last.not_before
     # XXX: In a backdated cert, this is almost always true.
     if old_lifetime >= lifetime_long:
-        cert = models.Certificate.sign(csr, ca, lifetime_long, backdate)
+        cert = models.Certificate.sign(csr, ca_cert, lifetime_long, backdate)
     else:
         # Never backdate short-lived certs
-        cert = models.Certificate.sign(csr, ca, lifetime_short, False)
+        cert = models.Certificate.sign(csr, ca_cert, lifetime_short, False)
     with transaction.manager:
         cert.save()
 
 
-def csr_resign(ca, lifetime_short, lifetime_long, backdate):
+def csr_resign(ca_cert, lifetime_short, lifetime_long, backdate):
     """Re-sign all requests for lifetime."""
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         try:
@@ -203,7 +202,9 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
         except Exception as exc:
             error_out("Not found or some other error", exc=exc)
         futures = (
-            executor.submit(refresh, csr, ca, lifetime_short, lifetime_long, backdate)
+            executor.submit(
+                refresh, csr, ca_cert, lifetime_short, lifetime_long, backdate
+            )
             for csr in csrlist
         )
         for future in concurrent.futures.as_completed(futures):
@@ -235,7 +236,7 @@ def main():
     except ValueError as error:
         error_out("Error reading ca data", exc=error)
 
-    ca = models.SigningCert.from_files(ca_cert_path, ca_key_path)
+    ca_cert = models.SigningCert.from_files(ca_cert_path, ca_key_path)
 
     if life_short > life_long:
         error_out(
@@ -261,10 +262,10 @@ def main():
 
     if args.sign:
         if args.long:
-            csr_sign(args.sign, ca, life_long, settings_backdate)
+            csr_sign(args.sign, ca_cert, life_long, settings_backdate)
         else:
             # Never backdate short lived certs
-            csr_sign(args.sign, ca, life_short, False)
+            csr_sign(args.sign, ca_cert, life_short, False)
 
     if args.refresh:
-        csr_resign(ca, life_short, life_long, settings_backdate)
+        csr_resign(ca_cert, life_short, life_long, settings_backdate)
