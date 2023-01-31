@@ -200,7 +200,7 @@ def csr_resign(ca_cert, lifetime_short, lifetime_long, backdate):
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         try:
             csrlist = models.CSR.refreshable()
-        except Exception as exc:
+        except Exception as exc:  # pylint:disable=broad-except
             error_out("Not found or some other error", exc=exc)
         futures = (
             executor.submit(refresh, csr, ca_cert, lifetime_short, lifetime_long, backdate)
@@ -209,8 +209,8 @@ def csr_resign(ca_cert, lifetime_short, lifetime_long, backdate):
         for future in concurrent.futures.as_completed(futures):
             try:
                 future.result()
-            except Exception as ex:
-                LOG.error("Future failed: %s", ex)
+            except Exception as exc:  # pylint:disable=broad-except
+                LOG.error("Future failed: %s", exc)
 
 
 def main():
