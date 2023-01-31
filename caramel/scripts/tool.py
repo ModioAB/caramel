@@ -185,7 +185,7 @@ def refresh(csr, ca_cert, lifetime_short, lifetime_long, backdate):
     """Refresh a single csr."""
     last = csr.certificates.first()
     old_lifetime = last.not_after - last.not_before
-    # XXX: In a backdated cert, this is almost always true.
+    # In a backdated cert, this is almost always true.
     if old_lifetime >= lifetime_long:
         cert = models.Certificate.sign(csr, ca_cert, lifetime_long, backdate)
     else:
