@@ -2,17 +2,18 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 import argparse
-
-from caramel import config
-from caramel.config import bootstrap
-from pyramid.settings import asbool
-from sqlalchemy import create_engine
-from dateutil.relativedelta import relativedelta
-import caramel.models as models
-import transaction
+import concurrent.futures
 import datetime
 import sys
-import concurrent.futures
+from dateutil.relativedelta import relativedelta
+
+import transaction
+from pyramid.settings import asbool
+from sqlalchemy import create_engine
+
+import caramel.models as models
+from caramel import config
+from caramel.config import bootstrap
 
 
 def cmdline():
