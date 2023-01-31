@@ -239,8 +239,8 @@ def main():
 
     if life_short > life_long:
         error_out(
-            "Short lived certs ({0}) shouldn't last longer "
-            "than long lived certs ({1})".format(life_short, life_long)
+            f"Short lived certs ({life_short}) shouldn't last longer "
+            f"than long lived certs ({life_long})"
         )
     if args.list:
         print_list()
