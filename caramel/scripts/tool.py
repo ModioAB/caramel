@@ -125,12 +125,12 @@ def csr_wipe(csr_id):
         csr.save()
 
 
-def csr_clean(csr_id):
-    """Clean out old certs."""
+def csr_clean(csr):
+    """Clean out old cert for csr."""
+    if not csr:
+        raise ValueError("Invalid csr")
+
     with transaction.manager:
-        csr = models.CSR.query().get(csr_id)
-        if not csr:
-            error_out("ID not found")
         certs = [csr.certificates.first()]
         csr.certificates = certs
         csr.save()
@@ -138,9 +138,14 @@ def csr_clean(csr_id):
 
 def clean_all():
     """Clean out all old requests."""
-    csrlist = models.CSR.refreshable()
-    for csr in csrlist:
-        csr_clean(csr.id)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+        csrlist = models.CSR.refreshable()
+        futures = [executor.submit(csr_clean, csr) for csr in csrlist]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:  # pylint:disable=broad-except
+                LOG.error("Future failed to clean: %s", exc)
 
 
 def csr_reject(csr_id):
@@ -212,8 +217,7 @@ def csr_resign(ca_cert, lifetime_short, lifetime_long, backdate):
             try:
                 future.result()
             except Exception as exc:  # pylint:disable=broad-except
-                LOG.error("Future failed: %s", exc)
-
+                LOG.error("Future failed to sign: %s", exc)
 
 def main():
     """Entrypoint of application."""
