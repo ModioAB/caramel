@@ -14,7 +14,6 @@ from sqlalchemy import create_engine
 
 from caramel import models
 from caramel import config
-from caramel.config import bootstrap
 
 LOG = logging.getLogger(name="caramel.tool")
 
@@ -204,9 +203,10 @@ def csr_resign(ca, lifetime_short, lifetime_long, backdate):
 
 
 def main():
+    """Entrypoint of application."""
     args = cmdline()
     logging.basicConfig(format="%(message)s", level=logging.WARNING)
-    env = bootstrap(args.inifile, dburl=args.dburl)
+    env = config.bootstrap(args.inifile, dburl=args.dburl)
     settings, closer = env["registry"].settings, env["closer"]
     db_url = config.get_db_url(args, settings)
     engine = create_engine(db_url)
