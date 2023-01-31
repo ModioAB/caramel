@@ -1,5 +1,6 @@
 #!/bin/env python3
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
+"""Admin tool to sign/refresh certificates."""
 
 import argparse
 import concurrent.futures
@@ -19,6 +20,7 @@ LOG = logging.getLogger(name="caramel.tool")
 
 
 def cmdline():
+    """Parse commandline."""
     parser = argparse.ArgumentParser()
 
     config.add_inifile_argument(parser)
@@ -83,6 +85,7 @@ def cmdline():
 
 
 def error_out(message, exc=None):
+    """Print error message and exit with failure code."""
     LOG.error(message)
     if exc is not None:
         LOG.error(str(exc))
@@ -90,6 +93,7 @@ def error_out(message, exc=None):
 
 
 def print_list():
+    """Print a list of certificates."""
     valid_requests = models.CSR.list_csr_printable()
 
     def unsigned_last(csr):
@@ -105,12 +109,14 @@ def print_list():
 
 
 def calc_lifetime(lifetime=relativedelta(hours=24)):
+    """Calculate lifetime of certificate."""
     now = datetime.datetime.utcnow()
     future = now + lifetime
     return future - now
 
 
 def csr_wipe(csr_id):
+    """Wipe a certain csr."""
     with transaction.manager:
         CSR = models.CSR.query().get(csr_id)
         if not CSR:
@@ -120,6 +126,7 @@ def csr_wipe(csr_id):
 
 
 def csr_clean(csr_id):
+    """Clean out old certs."""
     with transaction.manager:
         CSR = models.CSR.query().get(csr_id)
         if not CSR:
@@ -130,12 +137,14 @@ def csr_clean(csr_id):
 
 
 def clean_all():
+    """Clean out all old requests."""
     csrlist = models.CSR.refreshable()
     for csr in csrlist:
         csr_clean(csr.id)
 
 
 def csr_reject(csr_id):
+    """Reject a request."""
     with transaction.manager:
         CSR = models.CSR.query().get(csr_id)
         if not CSR:
@@ -146,6 +155,7 @@ def csr_reject(csr_id):
 
 
 def csr_sign(csr_id, ca, timedelta, backdate):
+    """Sign a request with ca, valid for timedelta, or backdate as well."""
     with transaction.manager:
         CSR = models.CSR.query().get(csr_id)
         if not CSR:
@@ -173,6 +183,7 @@ def csr_sign(csr_id, ca, timedelta, backdate):
 
 
 def refresh(csr, ca, lifetime_short, lifetime_long, backdate):
+    """Refresh a single csr."""
     last = csr.certificates.first()
     old_lifetime = last.not_after - last.not_before
     # XXX: In a backdated cert, this is almost always true.
@@ -186,6 +197,7 @@ def refresh(csr, ca, lifetime_short, lifetime_long, backdate):
 
 
 def csr_resign(ca, lifetime_short, lifetime_long, backdate):
+    """Re-sign all requests for lifetime."""
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         try:
             csrlist = models.CSR.refreshable()
