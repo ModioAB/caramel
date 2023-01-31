@@ -12,7 +12,7 @@ import transaction
 from pyramid.settings import asbool
 from sqlalchemy import create_engine
 
-import caramel.models as models
+from caramel import models
 from caramel import config
 from caramel.config import bootstrap
 
