@@ -175,6 +175,19 @@ class CSR(Base):
 
     @classmethod
     def list_csr_printable(cls):
+        """List printable csrs."""
+
+        # this query would in practice be a ton faster if it was written as:
+        # However, that + ORM isn't my favourite thing to express.
+        # with certs as (
+        # select certificate.csr_id AS csr_id, max(certificate.not_after)
+        # AS not_after FROM certificate GROUP BY certificate.csr_id
+        # )
+        # select csr.id, csr.commonname, csr.sha256sum, max(certs.not_after)
+        # FROM csr JOIN certs ON certs.csr_id = csr.id
+        # WHERE csr.rejected = false
+        # GROUP BY csr.id ORDER BY csr.id;
+
         return (
             DBSession.query(
                 CSR.id,
