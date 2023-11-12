@@ -49,7 +49,7 @@ venv-install: $(CARAMEL_TOOL)
 $(CARAMEL_TOOL): $(PYTHON3) setup.py
 	@$(BOLD); echo "Install caramel and its dependencies in venv: $(VENV)";\
 	$(BLR);
-	$(VENV)/bin/pip3 install -e .
+	$(VENV)/bin/python3 -m pip install -e .
 	cp development.ini $(VENV)/development.ini
 	mkdir $(VENV)/example_ca
 	@$(BLR)

@@ -2,10 +2,8 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 import sqlalchemy as _sa
-from sqlalchemy.ext.declarative import (
-    declared_attr,
-    as_declarative
-)
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import as_declarative
 import sqlalchemy.orm as _orm
 from zope.sqlalchemy import register
 
@@ -23,17 +21,6 @@ HASH = {1024: "sha1", 2048: "sha256", 4096: "sha512"}
 
 # These parts of the subject _must_ match our CA key
 CA_SUBJ_MATCH = (b"C", b"ST", b"L", b"O")
-
-
-def _crypto_patch():
-    """hijack _crypto internal lib and violate the default text encoding.
-    https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
-    https://github.com/pyca/pyopenssl/issues/129 is an open issue
-    about it."""
-    _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
-
-
-_crypto_patch()
 
 
 class SigningCert(object):
@@ -92,7 +79,7 @@ register(DBSession)
 class Base(object):
     @declared_attr  # type: ignore
     def __tablename__(cls) -> str:  # pylint: disable=no-self-argument
-        return cls.__name__.lower() # pylint: disable=no-member
+        return cls.__name__.lower()  # pylint: disable=no-member
 
     id = _sa.Column(_sa.Integer, primary_key=True)
 
@@ -133,11 +120,15 @@ class CSR(Base):
     commonname = _sa.Column(_sa.String(_UB_CN_LEN))
     rejected = _sa.Column(_sa.Boolean(create_constraint=True))
     accessed: List["AccessLog"] = _orm.relationship(
-        "AccessLog", backref="csr", order_by="AccessLog.when.desc()"
+        "AccessLog",
+        backref="csr",
+        cascade_backrefs=False,
+        order_by="AccessLog.when.desc()",
     )
     certificates: List["Certificate"] = _orm.relationship(
         "Certificate",
         backref="csr",
+        cascade_backrefs=False,
         order_by="Certificate.not_after.desc()",
         lazy="dynamic",
         cascade="all, delete-orphan",
@@ -205,14 +196,14 @@ class CSR(Base):
 
         # Options subqueryload is to prevent thousands of small queries and
         # instead batch load the certificates at once
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query().filter_by(rejected=False).filter(CSR.id.in_(all_signed)).all()
         )
 
     @classmethod
     def unsigned(cls):
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query()
             .filter_by(rejected=False)

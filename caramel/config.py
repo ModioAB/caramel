@@ -221,7 +221,7 @@ def get_log_level(argument_level, logger=None, env=None):
         logger = logging.getLogger()
     current_level = logger.level
 
-    argument_verbosity = logging.ERROR - argument_level * 10    # level steps are 10
+    argument_verbosity = logging.ERROR - argument_level * 10  # level steps are 10
     verbosity = min(argument_verbosity, env_level, current_level)
     log_level = (
         verbosity if logging.DEBUG <= verbosity <= logging.ERROR else logging.ERROR
