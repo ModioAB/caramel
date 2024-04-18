@@ -45,6 +45,7 @@ caramel:systest:
   before_script:
     - python3 -m pip install .
     - dnf -y install openssl
+    - test -e /etc/machine-id || echo f26871a049f84136bb011f4744cde2dd > /etc/machine-id
   script:
     - make systest
 
