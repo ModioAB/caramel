@@ -10,6 +10,9 @@ requires = [
     "cryptography>=0.5.dev1",
     "pyOpenSSL>=0.14",
     "python-dateutil",
+    # Transient dependency from pyramid->webob,
+    # should be fixed in a later release of webob
+    "legacy-cgi; python_version >= '3.13'"
 ]
 
 deplinks = []
