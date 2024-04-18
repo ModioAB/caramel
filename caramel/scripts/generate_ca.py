@@ -33,7 +33,11 @@ def _crypto_patch():
     https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
     https://github.com/pyca/pyopenssl/issues/129 is an open issue
     about it."""
-    _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
+    try:
+        _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
+    except AttributeError:
+        # Means we have a new OpenSSL and do not need to patch.
+        pass
 
 
 _crypto_patch()
