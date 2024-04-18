@@ -1,20 +1,17 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
-import sqlalchemy as _sa
-from sqlalchemy.ext.declarative import (
-    declared_attr,
-    as_declarative
-)
-import sqlalchemy.orm as _orm
-from zope.sqlalchemy import register
-
-import OpenSSL.crypto as _crypto
-from pyramid.decorator import reify as _reify
 import datetime as _datetime
-import dateutil.parser
 import uuid
 from typing import List
+
+import dateutil.parser
+import OpenSSL.crypto as _crypto
+import sqlalchemy as _sa
+import sqlalchemy.orm as _orm
+from pyramid.decorator import reify as _reify
+from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from zope.sqlalchemy import register
 
 X509_V3 = 0x2  # RFC 2459, 4.1.2.1
 
@@ -92,7 +89,7 @@ register(DBSession)
 class Base(object):
     @declared_attr  # type: ignore
     def __tablename__(cls) -> str:  # pylint: disable=no-self-argument
-        return cls.__name__.lower() # pylint: disable=no-member
+        return cls.__name__.lower()  # pylint: disable=no-member
 
     id = _sa.Column(_sa.Integer, primary_key=True)
 

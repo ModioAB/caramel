@@ -2,17 +2,17 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 import unittest
+from operator import attrgetter
+
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound
 
 from caramel.models import (
     CSR,
     SigningCert,
 )
 
-from . import fixtures, ModelTestCase
-
-from operator import attrgetter
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.exc import NoResultFound
+from . import ModelTestCase, fixtures
 
 
 class TestCSR(ModelTestCase):

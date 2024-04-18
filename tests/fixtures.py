@@ -1,10 +1,10 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
-from textwrap import dedent
-from hashlib import sha256
-from operator import attrgetter
 from datetime import datetime, timedelta
+from hashlib import sha256
 from itertools import zip_longest
+from operator import attrgetter
+from textwrap import dedent
 
 from caramel import models, views
 

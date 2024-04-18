@@ -6,8 +6,8 @@ from itertools import zip_longest
 import transaction
 
 from caramel.models import (
-    init_session,
     DBSession,
+    init_session,
 )
 
 from . import fixtures

@@ -5,22 +5,21 @@ import unittest
 import unittest.mock
 
 from pyramid import testing
-from pyramid.response import Response
 from pyramid.httpexceptions import (
-    HTTPLengthRequired,
-    HTTPRequestEntityTooLarge,
     HTTPBadRequest,
+    HTTPLengthRequired,
     HTTPNotFound,
+    HTTPRequestEntityTooLarge,
 )
+from pyramid.response import Response
 
-
+from caramel import views
 from caramel.models import (
     CSR,
     AccessLog,
 )
-from caramel import views
 
-from . import fixtures, ModelTestCase
+from . import ModelTestCase, fixtures
 
 
 def dummypost(fix, **args):

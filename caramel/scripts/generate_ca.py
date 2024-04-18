@@ -1,16 +1,18 @@
-﻿#! /usr/bin/env python3
+#! /usr/bin/env python3
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
-import datetime
 import argparse
-import uuid
+import datetime
 import os
+import uuid
+
 import OpenSSL.crypto as _crypto
-from caramel.config import (
-    setup_logging,
-    get_appsettings,
-)
+
 from caramel import config
+from caramel.config import (
+    get_appsettings,
+    setup_logging,
+)
 
 VERSION = 0x2
 CA_BITS = 4096
@@ -74,7 +76,7 @@ def matching_template(x509, cacert):
     casubject = casubject[:-2]
     subject = subject[:-2]
 
-    for (ca, sub) in zip(casubject, subject):
+    for ca, sub in zip(casubject, subject):
         if ca != sub:
             raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
 

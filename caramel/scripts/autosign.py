@@ -23,24 +23,22 @@ shouldn't have your private key accessible by the web-application.
 it."""
 
 import argparse
-
-import transaction
-import sys
-import logging
+import concurrent.futures
 import datetime
+import logging
+import sys
 import time
 import uuid
-import concurrent.futures
 
-from caramel.config import (
-    setup_logging,
-    bootstrap,
-)
-
+import transaction
 from sqlalchemy import create_engine
 
 import caramel.models as models
 from caramel import config
+from caramel.config import (
+    bootstrap,
+    setup_logging,
+)
 
 logger = logging.getLogger(__name__)
 

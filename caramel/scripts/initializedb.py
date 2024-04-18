@@ -3,12 +3,12 @@
 import argparse
 
 from sqlalchemy import create_engine
+
+import caramel.config as config
 from caramel.config import (
     get_appsettings,
     setup_logging,
 )
-
-import caramel.config as config
 from caramel.models import init_session
 
 

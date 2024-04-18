@@ -2,8 +2,8 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
-from .config import get_db_url
 
+from .config import get_db_url
 from .models import (
     init_session,
 )

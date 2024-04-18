@@ -2,8 +2,8 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 """tests.test_config contains the unittests for caramel.config"""
 import argparse
-import unittest
 import logging
+import unittest
 
 from caramel import config
 
