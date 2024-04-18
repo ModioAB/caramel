@@ -94,6 +94,8 @@ register(DBSession)
 
 @as_declarative()
 class Base(object):
+    __allow_unmapped__ = True
+
     @declared_attr  # type: ignore
     def __tablename__(cls) -> str:  # pylint: disable=no-self-argument
         return cls.__name__.lower() # pylint: disable=no-member
@@ -209,14 +211,14 @@ class CSR(Base):
 
         # Options subqueryload is to prevent thousands of small queries and
         # instead batch load the certificates at once
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query().filter_by(rejected=False).filter(CSR.id.in_(all_signed)).all()
         )
 
     @classmethod
     def unsigned(cls):
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query()
             .filter_by(rejected=False)
