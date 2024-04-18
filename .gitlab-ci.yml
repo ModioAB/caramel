@@ -37,6 +37,7 @@ caramel:systest:
   image: ${BUILD_IMAGE}
   before_script:
     - pip3 install .
+    - test -e /etc/machine-id || echo f26871a049f84136bb011f4744cde2dd > /etc/machine-id
   script:
     - make systest
 
