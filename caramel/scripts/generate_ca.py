@@ -12,6 +12,7 @@ from caramel.config import (
 )
 from caramel import config
 
+REQ_VERSION = 0x00
 VERSION = 0x2
 CA_BITS = 4096
 # Subject attribs, in order.
@@ -136,7 +137,7 @@ def create_ca_req(subject):
     key.generate_key(_crypto.TYPE_RSA, CA_BITS)
 
     req = _crypto.X509Req()
-    req.set_version(VERSION)
+    req.set_version(REQ_VERSION)
     req.set_pubkey(key)
 
     x509subject = req.get_subject()
