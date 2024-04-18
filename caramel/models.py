@@ -249,9 +249,15 @@ class CSR(Base):
         ).format(self)
 
 
+def utcnow():
+    """Return a non timezone-aware datetime in UTC."""
+    ts = _datetime.datetime.now(_datetime.timezone.utc)
+    return ts.replace(tzinfo=None)
+
+
 class AccessLog(Base):
     # XXX: name could be better
-    when = _sa.Column(_sa.DateTime, default=_datetime.datetime.utcnow)
+    when = _sa.Column(_sa.DateTime, default=utcnow)
     # XXX: name could be better, could perhaps be limited length,
     #      might not want this nullable
     addr = _sa.Column(_sa.Text)

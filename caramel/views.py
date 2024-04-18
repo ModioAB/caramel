@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 from hashlib import sha256
-from datetime import datetime
 
 from pyramid.response import Response
 from pyramid.view import view_config
@@ -21,6 +20,7 @@ from .models import (
     CSR,
     AccessLog,
     SigningCert,
+    utcnow,
 )
 
 
@@ -105,7 +105,7 @@ def cert_fetch(request):
         raise HTTPForbidden
     cert = csr.certificates.first()
     if cert:
-        if datetime.utcnow() < cert.not_after:
+        if utcnow() < cert.not_after:
             # XXX: appropriate content-type is ... ?
             return Response(
                 cert.pem, content_type="application/octet-stream", charset="UTF-8"

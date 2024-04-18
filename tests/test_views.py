@@ -17,6 +17,7 @@ from pyramid.httpexceptions import (
 from caramel.models import (
     CSR,
     AccessLog,
+    utcnow,
 )
 from caramel import views
 
@@ -137,7 +138,7 @@ class TestCertFetch(ModelTestCase):
     def test_exists_valid(self):
         sha256sum = fixtures.CSRData.initial.sha256sum
         csr = CSR.by_sha256sum(sha256sum)
-        now = datetime.datetime.utcnow()
+        now = utcnow()
         self.req.matchdict["sha256"] = sha256sum
         resp = views.cert_fetch(self.req)
         # Verify response contents
@@ -153,7 +154,7 @@ class TestCertFetch(ModelTestCase):
     def test_exists_expired(self):
         csr = fixtures.CSRData.with_expired_cert()
         csr.save()
-        now = datetime.datetime.utcnow()
+        now = utcnow()
         self.req.matchdict["sha256"] = csr.sha256sum
         resp = views.cert_fetch(self.req)
         # Verify response contents
@@ -168,7 +169,7 @@ class TestCertFetch(ModelTestCase):
     def test_not_signed(self):
         csr = fixtures.CSRData.good()
         csr.save()
-        now = datetime.datetime.utcnow()
+        now = utcnow()
         self.req.matchdict["sha256"] = csr.sha256sum
         resp = views.cert_fetch(self.req)
         # Verify response contents
