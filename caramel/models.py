@@ -2,10 +2,7 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 import sqlalchemy as _sa
-from sqlalchemy.ext.declarative import (
-    declared_attr,
-    as_declarative
-)
+from sqlalchemy.ext.declarative import declared_attr, as_declarative
 import sqlalchemy.orm as _orm
 from zope.sqlalchemy import register
 
@@ -98,7 +95,7 @@ class Base(object):
 
     @declared_attr  # type: ignore
     def __tablename__(cls) -> str:  # pylint: disable=no-self-argument
-        return cls.__name__.lower() # pylint: disable=no-member
+        return cls.__name__.lower()  # pylint: disable=no-member
 
     id = _sa.Column(_sa.Integer, primary_key=True)
 

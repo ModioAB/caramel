@@ -79,7 +79,7 @@ def matching_template(x509, cacert):
     casubject = casubject[:-2]
     subject = subject[:-2]
 
-    for (ca, sub) in zip(casubject, subject):
+    for ca, sub in zip(casubject, subject):
         if ca != sub:
             raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
 

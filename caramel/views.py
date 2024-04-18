@@ -28,7 +28,7 @@ from .models import (
 # 2 kbyte should be enough for up to 4 kbit keys.
 # XXX: This should probably be handled outside of app (i.e. by the
 #      server), or at least be configurable.
-_MAXLEN = 2 * 2 ** 10
+_MAXLEN = 2 * 2**10
 
 
 def raise_for_length(req, limit=_MAXLEN):
@@ -38,7 +38,7 @@ def raise_for_length(req, limit=_MAXLEN):
     if length is None:
         raise HTTPLengthRequired
     if length > limit:
-        raise HTTPRequestEntityTooLarge("Max size: {0} kB".format(limit / 2 ** 10))
+        raise HTTPRequestEntityTooLarge("Max size: {0} kB".format(limit / 2**10))
 
 
 def raise_for_subject(components, required_prefix):
