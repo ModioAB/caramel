@@ -12,6 +12,7 @@ from caramel.config import (
 )
 from caramel import config
 
+REQ_VERSION = 0x00
 VERSION = 0x2
 CA_BITS = 4096
 # Subject attribs, in order.
@@ -33,7 +34,11 @@ def _crypto_patch():
     https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
     https://github.com/pyca/pyopenssl/issues/129 is an open issue
     about it."""
-    _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
+    try:
+        _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
+    except AttributeError:
+        # Means we have a new OpenSSL and do not need to patch.
+        pass
 
 
 _crypto_patch()
@@ -74,7 +79,7 @@ def matching_template(x509, cacert):
     casubject = casubject[:-2]
     subject = subject[:-2]
 
-    for (ca, sub) in zip(casubject, subject):
+    for ca, sub in zip(casubject, subject):
         if ca != sub:
             raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
 
@@ -132,7 +137,7 @@ def create_ca_req(subject):
     key.generate_key(_crypto.TYPE_RSA, CA_BITS)
 
     req = _crypto.X509Req()
-    req.set_version(VERSION)
+    req.set_version(REQ_VERSION)
     req.set_pubkey(key)
 
     x509subject = req.get_subject()

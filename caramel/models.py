@@ -2,10 +2,7 @@
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
 import sqlalchemy as _sa
-from sqlalchemy.ext.declarative import (
-    declared_attr,
-    as_declarative
-)
+from sqlalchemy.ext.declarative import declared_attr, as_declarative
 import sqlalchemy.orm as _orm
 from zope.sqlalchemy import register
 
@@ -30,7 +27,11 @@ def _crypto_patch():
     https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
     https://github.com/pyca/pyopenssl/issues/129 is an open issue
     about it."""
-    _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
+    try:
+        _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
+    except AttributeError:
+        # Means we have a new OpenSSL and do not need to patch.
+        pass
 
 
 _crypto_patch()
@@ -90,9 +91,11 @@ register(DBSession)
 
 @as_declarative()
 class Base(object):
+    __allow_unmapped__ = True
+
     @declared_attr  # type: ignore
     def __tablename__(cls) -> str:  # pylint: disable=no-self-argument
-        return cls.__name__.lower() # pylint: disable=no-member
+        return cls.__name__.lower()  # pylint: disable=no-member
 
     id = _sa.Column(_sa.Integer, primary_key=True)
 
@@ -205,14 +208,14 @@ class CSR(Base):
 
         # Options subqueryload is to prevent thousands of small queries and
         # instead batch load the certificates at once
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query().filter_by(rejected=False).filter(CSR.id.in_(all_signed)).all()
         )
 
     @classmethod
     def unsigned(cls):
-        all_signed = _sa.select([Certificate.csr_id])
+        all_signed = _sa.select(Certificate.csr_id)
         return (
             cls.query()
             .filter_by(rejected=False)
@@ -243,9 +246,15 @@ class CSR(Base):
         ).format(self)
 
 
+def utcnow():
+    """Return a non timezone-aware datetime in UTC."""
+    ts = _datetime.datetime.now(_datetime.timezone.utc)
+    return ts.replace(tzinfo=None)
+
+
 class AccessLog(Base):
     # XXX: name could be better
-    when = _sa.Column(_sa.DateTime, default=_datetime.datetime.utcnow)
+    when = _sa.Column(_sa.DateTime, default=utcnow)
     # XXX: name could be better, could perhaps be limited length,
     #      might not want this nullable
     addr = _sa.Column(_sa.Text)
