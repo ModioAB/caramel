@@ -19,7 +19,7 @@ deplinks = []
 
 setup(
     name="caramel",
-    version="1.9.5",
+    version="1.9.6",
     python_requires=">=3.7",
     description="caramel",
     long_description="""
