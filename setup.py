@@ -2,22 +2,25 @@ from setuptools import setup, find_packages
 
 requires = [
     "pyramid",
-    "SQLAlchemy >= 1.4",
+    "SQLAlchemy ~= 1.4.32",
     "transaction",
     "pyramid_tm",
-    "zope.sqlalchemy >= 1.3",
+    "zope.sqlalchemy >= 1.6",
     "waitress",
-    "cryptography>=0.5.dev1",
-    "pyOpenSSL>=0.14",
+    "cryptography >= 38",
+    "pyOpenSSL >= 22.0.0",
     "python-dateutil",
+    # Transient dependency from pyramid->webob,
+    # should be fixed in a later release of webob
+    "legacy-cgi; python_version >= '3.13'"
 ]
 
 deplinks = []
 
 setup(
     name="caramel",
-    version="1.9.2",
-    python_requires=">=3.6",
+    version="1.9.5",
+    python_requires=">=3.7",
     description="caramel",
     long_description="""
 Caramel is a certificate management system that makes it easy to use client

@@ -1,21 +1,25 @@
 #!/bin/env python3
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
+"""Admin tool to sign/refresh certificates."""
 
 import argparse
+import concurrent.futures
+import datetime
+import logging
+import sys
 
-from caramel import config
-from caramel.config import bootstrap
+import transaction
+from dateutil.relativedelta import relativedelta
 from pyramid.settings import asbool
 from sqlalchemy import create_engine
-from dateutil.relativedelta import relativedelta
-import caramel.models as models
-import transaction
-import datetime
-import sys
-import concurrent.futures
+
+from caramel import config, models
+
+LOG = logging.getLogger(name="caramel.tool")
 
 
 def cmdline():
+    """Parse commandline."""
     parser = argparse.ArgumentParser()
 
     config.add_inifile_argument(parser)
@@ -79,12 +83,16 @@ def cmdline():
     return args
 
 
-def error_out(message):
-    print(message)
+def error_out(message, exc=None):
+    """Print error message and exit with failure code."""
+    LOG.error(message)
+    if exc is not None:
+        LOG.error(str(exc))
     sys.exit(1)
 
 
 def print_list():
+    """Print a list of certificates."""
     valid_requests = models.CSR.list_csr_printable()
 
     def unsigned_last(csr):
@@ -100,55 +108,60 @@ def print_list():
 
 
 def calc_lifetime(lifetime=relativedelta(hours=24)):
+    """Calculate lifetime of certificate."""
     now = datetime.datetime.utcnow()
     future = now + lifetime
     return future - now
 
 
 def csr_wipe(csr_id):
+    """Wipe a certain csr."""
     with transaction.manager:
-        CSR = models.CSR.query().get(csr_id)
-        if not CSR:
+        csr = models.CSR.query().get(csr_id)
+        if not csr:
             error_out("ID not found")
-        CSR.certificates = []
-        CSR.save()
+        csr.certificates = []
+        csr.save()
 
 
 def csr_clean(csr_id):
+    """Clean out old certs."""
     with transaction.manager:
-        CSR = models.CSR.query().get(csr_id)
-        if not CSR:
+        csr = models.CSR.query().get(csr_id)
+        if not csr:
             error_out("ID not found")
-        certs = [CSR.certificates.first()]
-        CSR.certificates = certs
-        CSR.save()
+        certs = [csr.certificates.first()]
+        csr.certificates = certs
+        csr.save()
 
 
 def clean_all():
+    """Clean out all old requests."""
     csrlist = models.CSR.refreshable()
     for csr in csrlist:
         csr_clean(csr.id)
 
 
 def csr_reject(csr_id):
+    """Reject a request."""
     with transaction.manager:
-        CSR = models.CSR.query().get(csr_id)
-        if not CSR:
+        csr = models.CSR.query().get(csr_id)
+        if not csr:
             error_out("ID not found")
+        csr.rejected = True
+        csr.save()
 
-        CSR.rejected = True
-        CSR.save()
 
-
-def csr_sign(csr_id, ca, timedelta, backdate):
+def csr_sign(csr_id, ca_cert, timedelta, backdate):
+    """Sign a request with ca, valid for timedelta, or backdate as well."""
     with transaction.manager:
-        CSR = models.CSR.query().get(csr_id)
-        if not CSR:
+        csr = models.CSR.query().get(csr_id)
+        if not csr:
             error_out("ID not found")
-        if CSR.rejected:
+        if csr.rejected:
             error_out("Refusing to sign rejected ID")
 
-        cert = CSR.certificates.first()
+        cert = csr.certificates.first()
         if cert:
             today = datetime.datetime.utcnow()
             cur_lifetime = cert.not_after - cert.not_before
@@ -163,43 +176,49 @@ def csr_sign(csr_id, ca, timedelta, backdate):
                 )
                 error_out(msg.format(cur_lifetime, timedelta))
 
-        cert = models.Certificate.sign(CSR, ca, timedelta, backdate)
+        cert = models.Certificate.sign(csr, ca_cert, timedelta, backdate)
         cert.save()
 
 
-def refresh(csr, ca, lifetime_short, lifetime_long, backdate):
+def refresh(csr, ca_cert, lifetime_short, lifetime_long, backdate):
+    """Refresh a single csr."""
     last = csr.certificates.first()
     old_lifetime = last.not_after - last.not_before
-    # XXX: In a backdated cert, this is almost always true.
+    # In a backdated cert, this is almost always true.
     if old_lifetime >= lifetime_long:
-        cert = models.Certificate.sign(csr, ca, lifetime_long, backdate)
+        cert = models.Certificate.sign(csr, ca_cert, lifetime_long, backdate)
     else:
         # Never backdate short-lived certs
-        cert = models.Certificate.sign(csr, ca, lifetime_short, False)
+        cert = models.Certificate.sign(csr, ca_cert, lifetime_short, False)
     with transaction.manager:
         cert.save()
 
 
-def csr_resign(ca, lifetime_short, lifetime_long, backdate):
+def csr_resign(ca_cert, lifetime_short, lifetime_long, backdate):
+    """Re-sign all requests for lifetime."""
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         try:
             csrlist = models.CSR.refreshable()
-        except Exception:
-            error_out("Not found or some other error")
+        except Exception as exc:  # pylint:disable=broad-except
+            error_out("Not found or some other error", exc=exc)
         futures = (
-            executor.submit(refresh, csr, ca, lifetime_short, lifetime_long, backdate)
+            executor.submit(
+                refresh, csr, ca_cert, lifetime_short, lifetime_long, backdate
+            )
             for csr in csrlist
         )
         for future in concurrent.futures.as_completed(futures):
             try:
                 future.result()
-            except Exception:
-                print("Future failed")
+            except Exception as exc:  # pylint:disable=broad-except
+                LOG.error("Future failed: %s", exc)
 
 
 def main():
+    """Entrypoint of application."""
     args = cmdline()
-    env = bootstrap(args.inifile, dburl=args.dburl)
+    logging.basicConfig(format="%(message)s", level=logging.WARNING)
+    env = config.bootstrap(args.inifile, dburl=args.dburl)
     settings, closer = env["registry"].settings, env["closer"]
     db_url = config.get_db_url(args, settings)
     engine = create_engine(db_url)
@@ -215,14 +234,14 @@ def main():
     try:
         ca_cert_path, ca_key_path = config.get_ca_cert_key_path(args, settings)
     except ValueError as error:
-        error_out(str(error))
+        error_out("Error reading ca data", exc=error)
 
-    ca = models.SigningCert.from_files(ca_cert_path, ca_key_path)
+    ca_cert = models.SigningCert.from_files(ca_cert_path, ca_key_path)
 
     if life_short > life_long:
         error_out(
-            "Short lived certs ({0}) shouldn't last longer "
-            "than long lived certs ({1})".format(life_short, life_long)
+            f"Short lived certs ({life_short}) shouldn't last longer "
+            f"than long lived certs ({life_long})"
         )
     if args.list:
         print_list()
@@ -243,10 +262,10 @@ def main():
 
     if args.sign:
         if args.long:
-            csr_sign(args.sign, ca, life_long, settings_backdate)
+            csr_sign(args.sign, ca_cert, life_long, settings_backdate)
         else:
             # Never backdate short lived certs
-            csr_sign(args.sign, ca, life_short, False)
+            csr_sign(args.sign, ca_cert, life_short, False)
 
     if args.refresh:
-        csr_resign(ca, life_short, life_long, settings_backdate)
+        csr_resign(ca_cert, life_short, life_long, settings_backdate)

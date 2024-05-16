@@ -1,17 +1,20 @@
-﻿#! /usr/bin/env python3
+#! /usr/bin/env python3
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
-import datetime
 import argparse
-import uuid
+import datetime
 import os
-import OpenSSL.crypto as _crypto
-from caramel.config import (
-    setup_logging,
-    get_appsettings,
-)
-from caramel import config
+import uuid
 
+import OpenSSL.crypto as _crypto
+
+from caramel import config
+from caramel.config import (
+    get_appsettings,
+    setup_logging,
+)
+
+REQ_VERSION = 0x00
 VERSION = 0x2
 CA_BITS = 4096
 # Subject attribs, in order.
@@ -26,17 +29,6 @@ CA_EXTENSIONS = [
     # no cRLSign as we do not use CRLs in caramel.
     _crypto.X509Extension(b"keyUsage", critical=True, value=b"keyCertSign"),
 ]
-
-
-def _crypto_patch():
-    """hijack _crypto internal lib and violate the default text encoding.
-    https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
-    https://github.com/pyca/pyopenssl/issues/129 is an open issue
-    about it."""
-    _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
-
-
-_crypto_patch()
 
 
 # Hack hack. :-)
@@ -74,7 +66,7 @@ def matching_template(x509, cacert):
     casubject = casubject[:-2]
     subject = subject[:-2]
 
-    for (ca, sub) in zip(casubject, subject):
+    for ca, sub in zip(casubject, subject):
         if ca != sub:
             raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
 
@@ -132,7 +124,7 @@ def create_ca_req(subject):
     key.generate_key(_crypto.TYPE_RSA, CA_BITS)
 
     req = _crypto.X509Req()
-    req.set_version(VERSION)
+    req.set_version(REQ_VERSION)
     req.set_pubkey(key)
 
     x509subject = req.get_subject()
