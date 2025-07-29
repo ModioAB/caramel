@@ -3,8 +3,6 @@
 
 import argparse
 import datetime
-import os
-import uuid
 
 import OpenSSL.crypto as _crypto
 import dateutil.parser
