@@ -28,7 +28,6 @@ CA_EXTENSIONS = [
 ]
 
 
-
 def cmdline():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -71,9 +70,10 @@ def display_crt(cert):
         name = ext.get_short_name()
         crit = ext.get_critical()
         data = ext.get_data()
-        print(f"Ext {n}: {name} crit={crit}: ", ext,  data)
+        print(f"Ext {n}: {name} crit={crit}: ", ext, data)
     pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
     print(str(pem, encoding="utf8"))
+
 
 def main():
     args = cmdline()
@@ -129,7 +129,6 @@ def main():
     print("Delta after is", after_delta)
     cert.gmtime_adj_notAfter(after_delta)
 
-
     cert.add_extensions(CA_EXTENSIONS)
     extension = _crypto.X509Extension(
         b"subjectKeyIdentifier", critical=False, value=b"hash", subject=orig
@@ -150,7 +149,10 @@ def main():
     display_crt(cert)
 
     assert orig.get_notBefore() == cert.get_notBefore()
-    assert orig.get_notAfter() == cert.get_notAfter(), f"{orig.get_notAfter()} != {cert.get_notAfter()}"
+    assert (
+        orig.get_notAfter() == cert.get_notAfter()
+    ), f"{orig.get_notAfter()} != {cert.get_notAfter()}"
+
 
 if __name__ == "__main__":
     main()
