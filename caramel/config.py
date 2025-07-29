@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 """caramel.config is a helper library that standardizes and collects the logic
- in one place used by the caramel CLI tools/scripts"""
+in one place used by the caramel CLI tools/scripts"""
 
 import argparse
 import logging
