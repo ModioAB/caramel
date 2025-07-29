@@ -81,7 +81,7 @@ class TestGetCAPrefix(unittest.TestCase):
         ca.get_ca_prefix()
 
     def test_empty_returns_from_empty_subject(self):
-        ca = SigningCert(fixtures.CertificateData.initial.pem)
+        ca = SigningCert(fixtures.CertificateData.empty_subject.pem)
         result = ca.get_ca_prefix()
         self.assertEqual((), result)
 

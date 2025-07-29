@@ -156,7 +156,7 @@ def create_ca(subject):
     return key, req, cert
 
 
-def write_files(key, keyname, cert, certname):
+def write_files(key, keyname, cert, certname, req):
     def writefile(data, name):
         with open(name, "w") as f:
             stream = data.decode("utf8")
@@ -167,6 +167,9 @@ def write_files(key, keyname, cert, certname):
 
     _cert = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
     writefile(_cert, certname)
+
+    _req = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, req)
+    writefile(_req, f"{certname}.csr")
 
 
 def cmdline():
@@ -201,7 +204,7 @@ def build_ca(keyname, certname):
     template = tuple(template)
 
     key, req, cert = create_ca(template)
-    write_files(key=key, keyname=keyname, cert=cert, certname=certname)
+    write_files(key=key, keyname=keyname, cert=cert, certname=certname, req=req)
 
 
 def main():
@@ -231,3 +234,6 @@ def main():
     print("Will write cert to {}".format(ca_cert_path))
 
     build_ca(keyname=ca_key_path, certname=ca_cert_path)
+
+if __name__ == "__main__":
+    main()
