@@ -1,14 +1,16 @@
+"""Generation script for test-data in our fixtures."""
+
 import datetime
-import fixtures
 import uuid
 
-import OpenSSL.crypto as _crypto
-import caramel
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
+
+import caramel
+import fixtures
 
 
 REQ_VERSION = 0x00
@@ -17,140 +19,45 @@ CA_BITS = 4096
 # Subject attribs, in order.
 ATTRIBS_TO_KEEP = ("C", "ST", "L", "O", "OU", "CN")
 CA_YEARS = 24  # Beware of unixtime ;)
-
-CA_EXTENSIONS = [
-    # Key usage for a CA cert.
-    _crypto.X509Extension(
-        b"basicConstraints", critical=True, value=b"CA:true, pathlen:0"
-    ),
-    # no cRLSign as we do not use CRLs in caramel.
-    _crypto.X509Extension(b"keyUsage", critical=True, value=b"keyCertSign"),
-]
-
-EXTENSIONS = [
-    _crypto.X509Extension(b"basicConstraints", critical=False, value=b"CA:FALSE"),
-    _crypto.X509Extension(
-        b"keyUsage",
-        critical=False,
-        value=b"nonRepudiation,digitalSignature,keyEncipherment",
-    ),
-]
+HASH = {1024: hashes.SHA1, 2048: hashes.SHA256, 4096: hashes.SHA512}
 
 
-# Hack hack. :-)
-def CA_LIFE():
+def ca_life():
+    """Lifetime of the CA in seconds."""
     d = datetime.date.today()
     t = datetime.date(d.year + CA_YEARS, d.month, d.day)
     return int((t - d).total_seconds())
 
 
-# adapted from models.py
-def components(subject):
-    comps = subject.get_components()
-    return dict((n.decode("utf8"), v.decode("utf8")) for n, v in comps)
+def matching_template(req, cacert):
+    """Compare required parts of subjects between two certs.
 
-
-def components2(subject):
-    return {attr.rfc4514_attribute_name: attr.value for attr in subject}
-
-
-def matching_template_new(x509, cacert):
-    """Takes a subject as a dict, and returns if all required fields
-    match. Otherwise raises exception"""
+    Raises an exception on mismatch.
+    """
 
     def later_check(subject):
-        """Check that the last two fields in subject are OU, CN"""
+        """Check that the last two fields in subject are OU, CN."""
         name_parts = list(subject)
         if name_parts[-1].rfc4514_attribute_name != "CN":
             raise ValueError("CN needs to be last in subject")
         if name_parts[-2].rfc4514_attribute_name != "OU":
             raise ValueError("OU needs to be second to last")
 
-    later_check(x509.subject)
+    later_check(req.subject)
     later_check(cacert.subject)
 
     # The lists do not contain the same data, so we cannot check
     # casubject == casubject_2
     # but we can run the same check twice and it ought to match
     casubject = list(cacert.subject)[:-2]
-    subject = list(x509.subject)[:-2]
+    subject = list(req.subject)[:-2]
     for ca, sub in zip(casubject, subject):
         if ca != sub:
-            raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
+            raise ValueError(f"Subject needs to match CA cert: {casubject}")
 
 
-def matching_template_old(x509, cacert):
-    """Takes a subject as a dict, and returns if all required fields
-    match. Otherwise raises exception"""
-
-    def later_check(subject):
-        """Check that the last two fields in subject are OU, CN"""
-        pair = subject[-1]
-        if pair[0].decode("utf8") != "CN":
-            raise ValueError("CN needs to be last in subject")
-
-        pair = subject[-2]
-        if pair[0].decode("utf8") != "OU":
-            raise ValueError("OU needs to be second to last")
-
-    casubject = cacert.get_subject().get_components()
-    subject = x509.get_subject().get_components()
-    later_check(casubject)
-    later_check(subject)
-
-    casubject = casubject[:-2]
-    subject = subject[:-2]
-
-    for ca, sub in zip(casubject, subject):
-        if ca != sub:
-            raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
-
-
-def sign_ca_req_old(req, cakey, serial):
-    request_subject = components(req.get_subject())
-    cert = _crypto.X509()
-    subject = cert.get_subject()
-    cert.set_serial_number(serial)
-    cert.set_version(VERSION)
-
-    for attrib in ATTRIBS_TO_KEEP:
-        if request_subject.get(attrib):
-            setattr(subject, attrib, request_subject[attrib])
-
-    issuer_subject = cert.get_subject()
-    cert.set_issuer(issuer_subject)
-    cert.set_pubkey(req.get_pubkey())
-
-    # Validity times
-    cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(CA_LIFE())
-
-    cert.add_extensions(CA_EXTENSIONS)
-
-    cacert = cert
-
-    extension = _crypto.X509Extension(
-        b"subjectKeyIdentifier", critical=False, value=b"hash", subject=cert
-    )
-    cert.add_extensions([extension])
-
-    # We need subjectKeyIdentifier to be added before we can add
-    # authorityKeyIdentifier.
-    extension = _crypto.X509Extension(
-        b"authorityKeyIdentifier",
-        critical=False,
-        value=b"issuer:always,keyid:always",
-        issuer=cacert,
-    )
-    cert.add_extensions([extension])
-
-    cert.sign(cakey, "sha512")
-    return cert
-
-
-def sign_ca_req_new(nreq, cakey, serial):
-    assert not isinstance(cakey, _crypto.PKey)
-
+def sign_ca_req_inner(nreq, cakey, serial):
+    """Inner signing, which does the work."""
     builder = x509.CertificateBuilder()
     builder = builder.serial_number(serial)
     # cert.set_version(VERSION)
@@ -164,7 +71,7 @@ def sign_ca_req_new(nreq, cakey, serial):
     # Validity times
     now = datetime.datetime.now(datetime.timezone.utc)
     builder = builder.not_valid_before(now)
-    builder = builder.not_valid_after(now + datetime.timedelta(seconds=CA_LIFE()))
+    builder = builder.not_valid_after(now + datetime.timedelta(seconds=ca_life()))
     builder = builder.add_extension(
         x509.BasicConstraints(ca=True, path_length=0), critical=True
     )
@@ -199,46 +106,13 @@ def sign_ca_req_new(nreq, cakey, serial):
 
 
 def sign_ca_req(nreq, cakey):
+    """Sign a CA request. Different from normal request due to extensions."""
     # Validate Subject contents. Not necessary for CA gen, but kept anyhow
-    matching_template_new(nreq, nreq)
+    matching_template(nreq, nreq)
     assert nreq.is_signature_valid is True
-
-    req = _crypto.X509Req.from_cryptography(nreq)
-    # Validate signature
-    req.verify(req.get_pubkey())
-    matching_template_old(req, req)
-
-    request_subject = components(req.get_subject())
-    request_subject_2 = components2(nreq.subject)
-
-    assert request_subject_2 == request_subject
-
     serial = int(uuid.uuid1())
-    cert = sign_ca_req_old(req, _crypto.PKey.from_cryptography_key(cakey), serial)
-    cert2 = sign_ca_req_new(nreq, cakey, serial)
-
-    cmp_crt(cert, cert2)
+    cert2 = sign_ca_req_inner(nreq, cakey, serial)
     return cert2
-
-
-def cmp_crt(old, new):
-    new_pem = new.public_bytes(serialization.Encoding.PEM).decode("utf8")
-    old_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, old).decode("utf8")
-    assert old_pem == new_pem, f"Mismatching pem\n{old_pem}\n{new_pem}\n"
-
-
-def create_ca_req_old(subject, key):
-    assert isinstance(key, _crypto.PKey)
-    req = _crypto.X509Req()
-    req.set_version(REQ_VERSION)
-    req.set_pubkey(key)
-
-    x509subject = req.get_subject()
-    for k, v in subject:
-        setattr(x509subject, k, v)
-    req.add_extensions(CA_EXTENSIONS)
-    req.sign(key, "sha512")
-    return req
 
 
 NAME_TO_OID = {
@@ -252,18 +126,20 @@ NAME_TO_OID = {
 
 
 def subject_to_name(subject):
-
+    """Take a subject set of tuples and turn it into a list of name attributes."""
     res = []
     for k, v in subject:
         res.append(x509.NameAttribute(NAME_TO_OID[k], v))
     return res
 
 
-def create_ca_req_new(subject, key):
-    assert not isinstance(key, _crypto.PKey)
-
+def create_ca_req(subject):
+    """Create a CA request from a subject."""
     attrs = subject_to_name(subject)
-
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=CA_BITS,
+    )
     nreq = (
         x509.CertificateSigningRequestBuilder()
         .subject_name(x509.Name(attrs))
@@ -284,40 +160,19 @@ def create_ca_req_new(subject, key):
         )
         .sign(key, hashes.SHA512())
     )
-    return nreq
-
-
-def create_ca_req(subject):
-    key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=CA_BITS,
-    )
-    req = create_ca_req_old(subject, _crypto.PKey.from_cryptography_key(key))
-    nreq = create_ca_req_new(subject, key)
-    cmp_req(req, nreq)
     return key, nreq
 
 
-def create_req_old(subject, key):
-    req = _crypto.X509Req()
-    req.set_version(REQ_VERSION)
-    req.set_pubkey(key)
+def create_req(subject):
+    """Create a normal request for the subject.
 
-    x509subject = req.get_subject()
-    for k, v in subject:
-        setattr(x509subject, k, v)
-
-    req.add_extensions(EXTENSIONS)
-
-    req.sign(key, "sha256")
-    return req
-
-
-def create_req_new(subject, key):
-
-    assert not isinstance(key, _crypto.PKey)
-
+    Extensions differ from a CA request.
+    """
     attrs = subject_to_name(subject)
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
 
     req = x509.CertificateSigningRequestBuilder().subject_name(x509.Name(attrs))
     req = req.add_extension(
@@ -338,88 +193,18 @@ def create_req_new(subject, key):
         critical=False,
     )
     req = req.sign(key, hashes.SHA256())
-    return req
-
-
-def cmp_req(old, new):
-    old_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, old).decode("utf8")
-    new_pem = new.public_bytes(serialization.Encoding.PEM).decode("utf8")
-    assert old_pem == new_pem, f"CSR Mismatch\n{old_pem}\n{new_pem}\n"
-
-
-def create_req(subject):
-    key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-    )
-    req = create_req_old(subject, _crypto.PKey.from_cryptography_key(key))
-    req2 = create_req_new(subject, key)
-    cmp_req(req, req2)
-
-    return key, req2
+    return key, req
 
 
 def create_ca(subject):
+    """Create a CA and self sign it."""
     key, req = create_ca_req(subject)
     cert = sign_ca_req(req, key)
     return key, req, cert
 
 
 def create_expired(req, ca_cert, ca_key):
-    old_req = _crypto.X509Req.from_cryptography(req)
-
-    cert = create_expired_old(old_req, ca_cert, ca_key)
-    cert2 = create_expired_new(
-        req, ca_cert.to_cryptography(), ca_key.to_cryptography_key()
-    )
-    cmp_crt(cert, cert2)
-    return cert2
-
-
-def create_expired_old(req, ca_cert, ca_key):
-    cert = _crypto.X509()
-    cert.set_subject(req.get_subject())
-    cert.set_serial_number(104)
-    cert.set_issuer(ca_cert.get_subject())
-    cert.set_pubkey(req.get_pubkey())
-    cert.set_version(caramel.models.X509_V3)
-    cert.gmtime_adj_notBefore(-86400 * 10 * 366)
-    cert.gmtime_adj_notAfter(-86400 * 9 * 366)
-    subjectAltName = bytes("DNS:" + "spam.example.com", "utf-8")
-    extensions = [
-        _crypto.X509Extension(b"basicConstraints", critical=True, value=b"CA:FALSE"),
-        _crypto.X509Extension(
-            b"extendedKeyUsage",
-            critical=True,
-            value=b"clientAuth,serverAuth",
-        ),
-        _crypto.X509Extension(b"subjectAltName", critical=False, value=subjectAltName),
-        _crypto.X509Extension(
-            b"subjectKeyIdentifier",
-            critical=False,
-            value=b"hash",
-            subject=cert,
-        ),
-    ]
-    cert.add_extensions(extensions)
-    # subjectKeyIdentifier has to be present before adding auth ident
-    extensions = [
-        _crypto.X509Extension(
-            b"authorityKeyIdentifier",
-            critical=False,
-            value=b"issuer:always,keyid:always",
-            issuer=ca_cert,
-        )
-    ]
-    cert.add_extensions(extensions)
-    bits = cert.get_pubkey().bits()
-    cert.sign(ca_key, caramel.models.HASH[bits])
-    return cert
-
-
-def create_expired_new(req, ca_cert, ca_key):
-    assert not isinstance(ca_key, _crypto.PKey)
-
+    """Create an expired cert for the request."""
     builder = x509.CertificateBuilder()
     builder = builder.serial_number(104)
     builder = builder.subject_name(req.subject)
@@ -431,7 +216,6 @@ def create_expired_new(req, ca_cert, ca_key):
     after = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
         seconds=86400 * 9 * 366
     )
-    print(before, after)
     builder = builder.not_valid_before(before)
     builder = builder.not_valid_after(after)
     builder = builder.add_extension(
@@ -467,7 +251,6 @@ def create_expired_new(req, ca_cert, ca_key):
         ),
         critical=False,
     )
-    HASH = {1024: hashes.SHA1, 2048: hashes.SHA256, 4096: hashes.SHA512}
 
     bits = req.public_key().key_size
     out = builder.sign(ca_key, HASH[bits]())
@@ -475,8 +258,10 @@ def create_expired_new(req, ca_cert, ca_key):
 
 
 def write_files(key, keyname, cert, certname):
+    """Write certain files we need."""
+
     def writefile(data, name):
-        with open(name, "w") as f:
+        with open(name, "w", encoding="utf8") as f:
             stream = data.decode("utf8")
             f.write(stream)
 
@@ -496,6 +281,7 @@ CA_CRT_FILE = "fixtures.ca.crt"
 
 
 def main():
+    """Generate some fixtures."""
     ca_template = fixtures.CertificateData.ca_cert.subject
     key, req, cert = create_ca(ca_template)
     write_files(key=key, keyname=CA_KEY_FILE, cert=cert, certname=CA_CRT_FILE)
@@ -526,7 +312,7 @@ def main():
     # Expired  crt
     _tkey, treq = create_req(fixtures.CSRData.with_expired_cert.subject_components)
     csr_pem = treq.public_bytes(serialization.Encoding.PEM)
-    cert = create_expired(treq, ca.cert, ca.key)
+    cert = create_expired(treq, ca.cert.to_cryptography(), ca.key.to_cryptography_key())
     crt_pem = cert.public_bytes(serialization.Encoding.PEM)
     print("expired\n", csr_pem.decode("utf8"), crt_pem.decode("utf8"))
 
