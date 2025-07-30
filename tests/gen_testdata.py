@@ -214,15 +214,14 @@ def sign_ca_req(req, cacert, cakey):
     serial = int(uuid.uuid1())
     cert = sign_ca_req_old(req, cacert, cakey, serial)
     cert2 = sign_ca_req_new(nreq, cakey.to_cryptography_key(), serial)
-    cert2 = _crypto.X509.from_cryptography(cert2)
 
     cmp_crt(cert, cert2)
     return cert
 
 
 def cmp_crt(old, new):
+    new_pem = new.public_bytes(serialization.Encoding.PEM).decode("utf8")
     old_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, old).decode("utf8")
-    new_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, new).decode("utf8")
     assert old_pem == new_pem, f"Mismatching pem\n{old_pem}\n{new_pem}\n"
 
 
@@ -291,10 +290,7 @@ def create_ca_req(subject):
     key.generate_key(_crypto.TYPE_RSA, CA_BITS)
     req = create_ca_req_old(subject, key)
     nreq = create_ca_req_new(subject, key.to_cryptography_key())
-
-    req2 = _crypto.X509Req.from_cryptography(nreq)
-
-    cmp_req(req, req2)
+    cmp_req(req, nreq)
     return key, req
 
 
@@ -343,7 +339,7 @@ def create_req_new(subject, key):
 
 def cmp_req(old, new):
     old_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, old).decode("utf8")
-    new_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, new).decode("utf8")
+    new_pem = new.public_bytes(serialization.Encoding.PEM).decode("utf8")
     assert old_pem == new_pem, f"CSR Mismatch\n{old_pem}\n{new_pem}\n"
 
 
@@ -352,11 +348,9 @@ def create_req(subject):
     key.generate_key(_crypto.TYPE_RSA, 2048)
     req = create_req_old(subject, key)
     req2 = create_req_new(subject, key.to_cryptography_key())
-
-    req2 = _crypto.X509Req.from_cryptography(req2)
     cmp_req(req, req2)
 
-    return key, req
+    return key, req2
 
 
 def create_ca(subject):
@@ -366,13 +360,14 @@ def create_ca(subject):
 
 
 def create_expired(req, ca_cert, ca_key):
-    cert = create_expired_old(req, ca_cert, ca_key)
+    old_req = _crypto.X509Req.from_cryptography(req)
+
+    cert = create_expired_old(old_req, ca_cert, ca_key)
     cert2 = create_expired_new(
-        req.to_cryptography(), ca_cert.to_cryptography(), ca_key.to_cryptography_key()
+        req, ca_cert.to_cryptography(), ca_key.to_cryptography_key()
     )
-    cert2 = _crypto.X509.from_cryptography(cert2)
     cmp_crt(cert, cert2)
-    return cert
+    return cert2
 
 
 def create_expired_old(req, ca_cert, ca_key):
@@ -495,33 +490,34 @@ def main():
     key, req, cert = create_ca(ca_template)
     write_files(key=key, keyname=CA_KEY_FILE, cert=cert, certname=CA_CRT_FILE)
     ca = caramel.models.SigningCert.from_files(CA_CRT_FILE, CA_KEY_FILE)
+    del key, req, cert
 
     # Initial certs data
-    tkey, treq = create_req(fixtures.CSRData.initial.subject_components)
-    csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
+    _tkey, treq = create_req(fixtures.CSRData.initial.subject_components)
+    csr_pem = treq.public_bytes(serialization.Encoding.PEM)
     csr = caramel.models.CSR("fakeshasum", csr_pem)
     cert = caramel.models.Certificate.sign(csr, ca)
     print("initial\n", csr.pem.decode("utf8"), cert.pem.decode("utf8"))
 
     # Empty subject cert
-    tkey, treq = create_req(fixtures.CSRData.empty_subject.subject_components)
-    csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
+    _tkey, treq = create_req(fixtures.CSRData.empty_subject.subject_components)
+    csr_pem = treq.public_bytes(serialization.Encoding.PEM)
     csr = caramel.models.CSR("fakeshasum", csr_pem)
     cert = caramel.models.Certificate.sign(csr, ca)
     print("empty_subject\n", csr.pem.decode("utf8"), cert.pem.decode("utf8"))
 
     # Good crt
-    tkey, treq = create_req(fixtures.CSRData.good.subject_components)
-    csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
+    _tkey, treq = create_req(fixtures.CSRData.good.subject_components)
+    csr_pem = treq.public_bytes(serialization.Encoding.PEM)
     csr = caramel.models.CSR("fakeshasum", csr_pem)
     cert = caramel.models.Certificate.sign(csr, ca)
     print("good\n", csr.pem.decode("utf8"), cert.pem.decode("utf8"))
 
     # Expired  crt
-    tkey, treq = create_req(fixtures.CSRData.with_expired_cert.subject_components)
-    csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
-    cert = create_expired(req, ca.cert, ca.key)
-    crt_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
+    _tkey, treq = create_req(fixtures.CSRData.with_expired_cert.subject_components)
+    csr_pem = treq.public_bytes(serialization.Encoding.PEM)
+    cert = create_expired(treq, ca.cert, ca.key)
+    crt_pem = cert.public_bytes(serialization.Encoding.PEM)
     print("expired\n", csr_pem.decode("utf8"), crt_pem.decode("utf8"))
 
 
