@@ -69,5 +69,6 @@ dev = [
     "pylint>=2.13.9",
     "pylint-exit>=1.2.0",
     "sqlalchemy[mypy]<2",
+    "types-python-dateutil>=2.8.19.14",
 ]
 
