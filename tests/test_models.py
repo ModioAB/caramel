@@ -67,9 +67,7 @@ class TestGetCAPrefix(unittest.TestCase):
         pass
 
     def test_blank_file(self):
-        import OpenSSL
-
-        with self.assertRaises(OpenSSL.crypto.Error):
+        with self.assertRaises(ValueError):
             SigningCert("")
 
     def test_valid_cert(self):
@@ -98,7 +96,7 @@ class TestGetCAPrefix(unittest.TestCase):
     def test_only_CN_returns_from_CN_selector(self):
         CN_TUPLE = (("CN", "Caramel Signing Certificate"),)
         ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
-        result = ca.get_ca_prefix((b"CN",))
+        result = ca.get_ca_prefix(("CN",))
         self.assertEqual(CN_TUPLE, result)
 
     def test_only_wanted_returns_from_selector(self):
@@ -107,7 +105,7 @@ class TestGetCAPrefix(unittest.TestCase):
             ("L", "Norrköping"),
             ("OU", "Muppar Teknik"),
         )
-        SELECTOR = (b"ST", b"L", b"OU")
+        SELECTOR = ("ST", "L", "OU")
         ca = SigningCert(fixtures.CertificateData.ca_cert.pem)
         result = ca.get_ca_prefix(SELECTOR)
         self.assertEqual(SELECTED, result)

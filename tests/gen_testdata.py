@@ -165,7 +165,7 @@ def main():
     # Expired  crt
     _tkey, treq = create_req(fixtures.CSRData.with_expired_cert.subject_components)
     csr_pem = treq.public_bytes(serialization.Encoding.PEM)
-    cert = create_expired(treq, ca.cert.to_cryptography(), ca.key.to_cryptography_key())
+    cert = create_expired(treq, ca.cert, ca.key)
     crt_pem = cert.public_bytes(serialization.Encoding.PEM)
     print("expired\n", csr_pem.decode("utf8"), crt_pem.decode("utf8"))
 

@@ -1,12 +1,16 @@
 #! /usr/bin/env python
 # vim: expandtab shiftwidth=4 softtabstop=4 tabstop=17 filetype=python :
 
+from cryptography import x509 as _x509
+from cryptography.hazmat.primitives import hashes as _hashes
+from cryptography.hazmat.primitives import serialization as _serialization
+
+
 import sqlalchemy as _sa
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
 import sqlalchemy.orm as _orm
 from zope.sqlalchemy import register
 
-import OpenSSL.crypto as _crypto
 from pyramid.decorator import reify as _reify
 import datetime as _datetime
 import dateutil.parser
@@ -16,34 +20,27 @@ from typing import List
 X509_V3 = 0x2  # RFC 2459, 4.1.2.1
 
 # Bitlength to Hash Strength lookup table.
-HASH = {1024: "sha1", 2048: "sha256", 4096: "sha512"}
+HASH = {
+    1024: _hashes.SHA1,
+    2048: _hashes.SHA256,
+    4096: _hashes.SHA512,
+}
 
 # These parts of the subject _must_ match our CA key
-CA_SUBJ_MATCH = (b"C", b"ST", b"L", b"O")
+CA_SUBJ_MATCH = ("C", "ST", "L", "O")
 
 
-def _crypto_patch():
-    """hijack _crypto internal lib and violate the default text encoding.
-    https://github.com/pyca/pyopenssl/pull/115 has a pull&fix for it
-    https://github.com/pyca/pyopenssl/issues/129 is an open issue
-    about it."""
-    try:
-        _crypto._lib.ASN1_STRING_set_default_mask_asc(b"utf8only")
-    except AttributeError:
-        # Means we have a new OpenSSL and do not need to patch.
-        pass
-
-
-_crypto_patch()
-
-
-class SigningCert(object):
+class SigningCert:
     """Data class to wrap signing key + cert, to help refactoring"""
 
     def __init__(self, cert, key=None):
         if key:
-            self.key = _crypto.load_privatekey(_crypto.FILETYPE_PEM, key)
-        self.cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, cert)
+            if isinstance(key, str):
+                key = key.encode("utf8")
+            self.key = _serialization.load_pem_private_key(key, password=None)
+        if isinstance(cert, str):
+            cert = cert.encode("utf8")
+        self.cert = _x509.load_pem_x509_certificate(cert)
 
     @classmethod
     def from_files(cls, certfile, keyfile=None):
@@ -58,24 +55,18 @@ class SigningCert(object):
 
     @_reify
     def not_before(self):
-        ts = self.cert.get_notBefore()
-        if not ts:
-            return None
-        return dateutil.parser.parse(ts)
+        return self.cert.not_valid_before_utc
 
     @_reify
     def pem(self):
-        return _crypto.dump_certificate(_crypto.FILETYPE_PEM, self.cert)
+        ret = self.cert.public_bytes(serialization.Encoding.PEM)
+        return ret
 
     # Returns the parts we _care_ about in the subject, from a ca
     def get_ca_prefix(self, subj_match=CA_SUBJ_MATCH):
-        subject = self.cert.get_subject()
-        components = dict(subject.get_components())
-        matches = tuple(
-            (n.decode("utf8"), components[n].decode("utf8"))
-            for n in subj_match
-            if n in components
-        )
+        # newer API uses strings instead of bytes, thus we decode them here
+        name_map = {a.rfc4514_attribute_name: a.value for a in self.cert.subject}
+        matches = tuple((n, name_map[n]) for n in subj_match if n in name_map)
         return matches
 
 
@@ -90,7 +81,7 @@ register(DBSession)
 
 
 @as_declarative()
-class Base(object):
+class Base:
     __allow_unmapped__ = True
 
     @declared_attr  # type: ignore
@@ -150,36 +141,37 @@ class CSR(Base):
         # XXX: assert sha256(reqtext).hexdigest() == sha256sum ?
         self.sha256sum = sha256sum
         self.pem = reqtext
-        # FIXME: Below 4 lines (try/except) are duped in the req() function.
-        try:
-            self.req.verify(self.req.get_pubkey())
-        except _crypto.Error:
-            raise ValueError("invalid PEM reqtext")
+
+        req = _x509.load_pem_x509_csr(self.pem)
+        if not req.is_signature_valid:
+            raise ValueError("Invalid Request (invalid signature)")
+
         # Check for and reject reqtext with trailing content
-        pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, self.req)
+        pem = req.public_bytes(_serialization.Encoding.PEM)
         if pem != self.pem:
             raise ValueError("invalid PEM reqtext")
-        self.orgunit = self.subject.OU
-        self.commonname = self.subject.CN
+
+        def subj_item(subject, key):
+            for item in subject:
+                if item.rfc4514_attribute_name == key:
+                    return item.value
+            return ""
+
+        self.orgunit = subj_item(req.subject, "OU")
+        self.commonname = subj_item(req.subject, "CN")
         self.rejected = False
 
     @_reify
     def req(self):
-        req = _crypto.load_certificate_request(_crypto.FILETYPE_PEM, self.pem)
-        try:
-            req.verify(req.get_pubkey())
-        except _crypto.Error:
-            raise ValueError("Invalid Request")
+        req = _x509.load_pem_x509_csr(self.pem)
+        if not req.is_signature_valid:
+            raise ValueError("Invalid Request (invalid signature)")
         return req
 
     @_reify
-    def subject(self):
-        return self.req.get_subject()
-
-    @_reify
     def subject_components(self):
-        components = self.subject.get_components()
-        return tuple((n.decode("utf8"), v.decode("utf8")) for n, v in components)
+        res = tuple((a.rfc4514_attribute_name, a.value) for a in self.req.subject)
+        return res
 
     @classmethod
     def valid(cls):
@@ -273,7 +265,7 @@ class AccessLog(Base):
         return "<{0.__class__.__name__} id={0.id}>".format(self)
 
 
-class Extension(object):
+class Extension:
     """Convenience class to make validating Extensions a bit easier"""
 
     critical = False
@@ -282,9 +274,9 @@ class Extension(object):
     text = None
 
     def __init__(self, ext):
-        self.name = ext.get_short_name()
-        self.critical = bool(ext.get_critical())
-        self.data = ext.get_data()
+        self.name = ext.oid._name
+        self.critical = ext.critical
+        self.data = ext.value
         self.text = str(ext)
 
 
@@ -300,36 +292,34 @@ class Certificate(Base):
         self.csr_id = CSR.id
 
         req = CSR.req
-        cert_pkey = self.cert.get_pubkey()
+        cert_pkey = self.cert.public_key()
 
         # We can't compare pubkeys directly, so we just verify the signature.
-        if not req.verify(cert_pkey):
+        if not req.is_signature_valid:
             raise ValueError("Public key of cert cannot verify request")
 
-        self.not_before = dateutil.parser.parse(self.cert.get_notBefore())
-        self.not_after = dateutil.parser.parse(self.cert.get_notAfter())
+        self.not_before = self.cert.not_valid_before_utc
+        self.not_after = self.cert.not_valid_after_utc
 
     @_reify
     def cert(self):
-        cert = _crypto.load_certificate(_crypto.FILETYPE_PEM, self.pem)
+        cert = _x509.load_pem_x509_certificate(self.pem)
 
         extensions = {}
-        for index in range(0, cert.get_extension_count()):
-            ext = cert.get_extension(index)
+        for ext in cert.extensions:
             my_ext = Extension(ext)
             extensions[my_ext.name] = my_ext
-
-        if cert.get_version() != X509_V3:
+        if cert.version.value != X509_V3:
             raise ValueError("Not a x509.v3 certificate")
 
-        ext = extensions.get(b"basicConstraints")
+        ext = extensions.get("basicConstraints")
         if not ext:
             raise ValueError("Missing Basic Constraints")
 
         if not ext.critical:
             raise ValueError("Extended Key Usage not critical")
 
-        ext = extensions.get(b"extendedKeyUsage")
+        ext = extensions.get("extendedKeyUsage")
         if not ext:
             raise ValueError("Missing Extended Key Usage extension")
         if not ext.critical:
@@ -351,54 +341,56 @@ class Certificate(Base):
         timekeeping bug in some firmware.
         """
         assert isinstance(ca, SigningCert)
+
+        now = _datetime.datetime.now(tz=_datetime.timezone.utc)
+
         notAfter = int(lifetime.total_seconds())
         # TODO: Verify that the data in DB matches csr_add rules in views.py
 
-        cert = _crypto.X509()
-        cert.set_subject(CSR.req.get_subject())
-        cert.set_serial_number(int(uuid.uuid1()))
-        cert.set_issuer(ca.cert.get_subject())
-        cert.set_pubkey(CSR.req.get_pubkey())
-        cert.set_version(X509_V3)
-        cert.gmtime_adj_notBefore(0)
-        cert.gmtime_adj_notAfter(notAfter)
+        cert = _x509.CertificateBuilder()
+        cert = cert.subject_name(CSR.req.subject)
+        cert = cert.serial_number(int(uuid.uuid1()))
+        cert = cert.issuer_name(ca.cert.subject)
+        cert = cert.public_key(CSR.req.public_key())
+        cert = cert.not_valid_before(now)
+        cert = cert.not_valid_after(now + _datetime.timedelta(seconds=notAfter))
         if backdate and ca.not_before:
-            now = _datetime.datetime.now(tz=_datetime.timezone.utc)
-            delta = ca.not_before - now
-            cert.gmtime_adj_notBefore(int(delta.total_seconds()))
+            cert = cert.not_valid_before(ca.not_before)
 
-        subjectAltName = bytes("DNS:" + CSR.commonname, "utf-8")
-        extensions = [
-            _crypto.X509Extension(
-                b"basicConstraints", critical=True, value=b"CA:FALSE"
+        cert = cert.add_extension(
+            _x509.BasicConstraints(ca=False, path_length=None), critical=True
+        )
+        cert = cert.add_extension(
+            _x509.ExtendedKeyUsage(
+                [
+                    _x509.ExtendedKeyUsageOID.CLIENT_AUTH,
+                    _x509.ExtendedKeyUsageOID.SERVER_AUTH,
+                ]
             ),
-            _crypto.X509Extension(
-                b"extendedKeyUsage",
-                critical=True,
-                value=b"clientAuth,serverAuth",
-            ),
-            _crypto.X509Extension(
-                b"subjectAltName", critical=False, value=subjectAltName
-            ),
-            _crypto.X509Extension(
-                b"subjectKeyIdentifier",
-                critical=False,
-                value=b"hash",
-                subject=cert,
-            ),
-        ]
-        cert.add_extensions(extensions)
+            critical=True,
+        )
+        cert = cert.add_extension(
+            _x509.SubjectAlternativeName([_x509.DNSName(CSR.commonname)]),
+            critical=False,
+        )
+        cert = cert.add_extension(
+            _x509.SubjectKeyIdentifier.from_public_key(CSR.req.public_key()),
+            critical=False,
+        )
         # subjectKeyIdentifier has to be present before adding auth ident
-        extensions = [
-            _crypto.X509Extension(
-                b"authorityKeyIdentifier",
-                critical=False,
-                value=b"issuer:always,keyid:always",
-                issuer=ca.cert,
-            )
-        ]
-        cert.add_extensions(extensions)
-        bits = cert.get_pubkey().bits()
-        cert.sign(ca.key, HASH[bits])
-        pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
+        issuer_identifier = _x509.SubjectKeyIdentifier.from_public_key(
+            ca.cert.public_key()
+        )
+
+        cert = cert.add_extension(
+            _x509.AuthorityKeyIdentifier(
+                key_identifier=issuer_identifier.key_identifier,
+                authority_cert_serial_number=ca.cert.serial_number,
+                authority_cert_issuer=[_x509.DirectoryName(ca.cert.subject)],
+            ),
+            critical=False,
+        )
+        bits = CSR.req.public_key().key_size
+        cert = cert.sign(ca.key, HASH[bits]())
+        pem = cert.public_bytes(_serialization.Encoding.PEM)
         return cls(CSR=CSR, pem=pem)
