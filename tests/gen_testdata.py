@@ -54,7 +54,32 @@ def components2(subject):
     return {attr.rfc4514_attribute_name: attr.value for attr in subject}
 
 
-def matching_template(x509, cacert):
+def matching_template_new(x509, cacert):
+    """Takes a subject as a dict, and returns if all required fields
+    match. Otherwise raises exception"""
+
+    def later_check(subject):
+        """Check that the last two fields in subject are OU, CN"""
+        name_parts = list(subject)
+        if name_parts[-1].rfc4514_attribute_name != "CN":
+            raise ValueError("CN needs to be last in subject")
+        if name_parts[-2].rfc4514_attribute_name != "OU":
+            raise ValueError("OU needs to be second to last")
+
+    later_check(x509.subject)
+    later_check(cacert.subject)
+
+    # The lists do not contain the same data, so we cannot check
+    # casubject == casubject_2
+    # but we can run the same check twice and it ought to match
+    casubject = list(cacert.subject)[:-2]
+    subject = list(x509.subject)[:-2]
+    for ca, sub in zip(casubject, subject):
+        if ca != sub:
+            raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
+
+
+def matching_template_old(x509, cacert):
     """Takes a subject as a dict, and returns if all required fields
     match. Otherwise raises exception"""
 
@@ -68,24 +93,10 @@ def matching_template(x509, cacert):
         if pair[0].decode("utf8") != "OU":
             raise ValueError("OU needs to be second to last")
 
-    def later_check_2(subject):
-        """Check that the last two fields in subject are OU, CN"""
-        name_parts = list(subject)
-        if name_parts[-1].rfc4514_attribute_name != "CN":
-            raise ValueError("CN needs to be last in subject")
-        if name_parts[-2].rfc4514_attribute_name != "OU":
-            raise ValueError("OU needs to be second to last")
-
     casubject = cacert.get_subject().get_components()
     subject = x509.get_subject().get_components()
     later_check(casubject)
     later_check(subject)
-
-    x509_2 = x509.to_cryptography()
-    later_check_2(x509_2.subject)
-
-    cacert_2 = cacert.to_cryptography()
-    later_check_2(cacert_2.subject)
 
     casubject = casubject[:-2]
     subject = subject[:-2]
@@ -94,17 +105,8 @@ def matching_template(x509, cacert):
         if ca != sub:
             raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
 
-    # The lists do not contain the same data, so we cannot check
-    # casubject == casubject_2
-    # but we can run the same check twice and it ought to match
-    casubject_2 = list(cacert_2.subject)[:-2]
-    subject_2 = list(x509_2.subject)[:-2]
-    for ca, sub in zip(casubject_2, subject_2):
-        if ca != sub:
-            raise ValueError("Subject needs to match CA cert:" "{}".format(casubject_2))
 
-
-def sign_ca_req_old(req, cacert, cakey, serial):
+def sign_ca_req_old(req, cakey, serial):
     request_subject = components(req.get_subject())
     cert = _crypto.X509()
     subject = cert.get_subject()
@@ -196,15 +198,15 @@ def sign_ca_req_new(nreq, cakey, serial):
     return cert
 
 
-def sign_ca_req(req, cacert, cakey):
+def sign_ca_req(nreq, cakey):
     # Validate Subject contents. Not necessary for CA gen, but kept anyhow
-    matching_template(req, cacert)
+    matching_template_new(nreq, nreq)
+    assert nreq.is_signature_valid is True
 
+    req = _crypto.X509Req.from_cryptography(nreq)
     # Validate signature
     req.verify(req.get_pubkey())
-
-    nreq = req.to_cryptography()
-    assert nreq.is_signature_valid is True
+    matching_template_old(req, req)
 
     request_subject = components(req.get_subject())
     request_subject_2 = components2(nreq.subject)
@@ -212,11 +214,11 @@ def sign_ca_req(req, cacert, cakey):
     assert request_subject_2 == request_subject
 
     serial = int(uuid.uuid1())
-    cert = sign_ca_req_old(req, cacert, cakey, serial)
-    cert2 = sign_ca_req_new(nreq, cakey.to_cryptography_key(), serial)
+    cert = sign_ca_req_old(req, _crypto.PKey.from_cryptography_key(cakey), serial)
+    cert2 = sign_ca_req_new(nreq, cakey, serial)
 
     cmp_crt(cert, cert2)
-    return cert
+    return cert2
 
 
 def cmp_crt(old, new):
@@ -286,12 +288,14 @@ def create_ca_req_new(subject, key):
 
 
 def create_ca_req(subject):
-    key = _crypto.PKey()
-    key.generate_key(_crypto.TYPE_RSA, CA_BITS)
-    req = create_ca_req_old(subject, key)
-    nreq = create_ca_req_new(subject, key.to_cryptography_key())
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=CA_BITS,
+    )
+    req = create_ca_req_old(subject, _crypto.PKey.from_cryptography_key(key))
+    nreq = create_ca_req_new(subject, key)
     cmp_req(req, nreq)
-    return key, req
+    return key, nreq
 
 
 def create_req_old(subject, key):
@@ -344,10 +348,12 @@ def cmp_req(old, new):
 
 
 def create_req(subject):
-    key = _crypto.PKey()
-    key.generate_key(_crypto.TYPE_RSA, 2048)
-    req = create_req_old(subject, key)
-    req2 = create_req_new(subject, key.to_cryptography_key())
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+    req = create_req_old(subject, _crypto.PKey.from_cryptography_key(key))
+    req2 = create_req_new(subject, key)
     cmp_req(req, req2)
 
     return key, req2
@@ -355,7 +361,7 @@ def create_req(subject):
 
 def create_ca(subject):
     key, req = create_ca_req(subject)
-    cert = sign_ca_req(req, req, key)
+    cert = sign_ca_req(req, key)
     return key, req, cert
 
 
@@ -474,11 +480,15 @@ def write_files(key, keyname, cert, certname):
             stream = data.decode("utf8")
             f.write(stream)
 
-    _key = _crypto.dump_privatekey(_crypto.FILETYPE_PEM, key)
-    writefile(_key, keyname)
+    keydata = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    writefile(keydata, keyname)
 
-    _cert = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
-    writefile(_cert, certname)
+    certdata = cert.public_bytes(serialization.Encoding.PEM)
+    writefile(certdata, certname)
 
 
 CA_KEY_FILE = "fixtures.ca.key"
