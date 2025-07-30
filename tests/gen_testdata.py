@@ -61,6 +61,9 @@ def components(subject):
     comps = subject.get_components()
     return dict((n.decode("utf8"), v.decode("utf8")) for n, v in comps)
 
+def components2(subject):
+    return {attr.rfc4514_attribute_name: attr.value for attr in subject}
+
 
 def matching_template(x509, cacert):
     """Takes a subject as a dict, and returns if all required fields
@@ -76,10 +79,24 @@ def matching_template(x509, cacert):
         if pair[0].decode("utf8") != "OU":
             raise ValueError("OU needs to be second to last")
 
+    def later_check_2(subject):
+        """Check that the last two fields in subject are OU, CN"""
+        name_parts = list(subject)
+        if name_parts[-1].rfc4514_attribute_name != "CN":
+            raise ValueError("CN needs to be last in subject")
+        if name_parts[-2].rfc4514_attribute_name != "OU":
+            raise ValueError("OU needs to be second to last")
+
     casubject = cacert.get_subject().get_components()
     subject = x509.get_subject().get_components()
     later_check(casubject)
     later_check(subject)
+
+    x509_2 = x509.to_cryptography()
+    later_check_2(x509_2.subject)
+
+    cacert_2 = cacert.to_cryptography()
+    later_check_2(cacert_2.subject)
 
     casubject = casubject[:-2]
     subject = subject[:-2]
@@ -88,18 +105,22 @@ def matching_template(x509, cacert):
         if ca != sub:
             raise ValueError("Subject needs to match CA cert:" "{}".format(casubject))
 
+    # The lists do not contain the same data, so we cannot check
+    # casubject == casubject_2
+    # but we can run the same check twice and it ought to match
+    casubject_2 = list(cacert_2.subject)[:-2]
+    subject_2 = list(x509_2.subject)[:-2]
+    for ca, sub in zip(casubject_2, subject_2):
+        if ca != sub:
+            raise ValueError("Subject needs to match CA cert:" "{}".format(casubject_2))
 
-def sign_ca_req(req, cacert, cakey):
-    # Validate Subject contents. Not necessary for CA gen, but kept anyhow
-    matching_template(req, cacert)
 
-    # Validate signature
-    req.verify(req.get_pubkey())
+
+def sign_ca_req_old(req, cacert, cakey, serial):
     request_subject = components(req.get_subject())
-
     cert = _crypto.X509()
     subject = cert.get_subject()
-    cert.set_serial_number(int(uuid.uuid1()))
+    cert.set_serial_number(serial)
     cert.set_version(VERSION)
 
     for attrib in ATTRIBS_TO_KEEP:
@@ -134,6 +155,76 @@ def sign_ca_req(req, cacert, cakey):
     cert.add_extensions([extension])
 
     cert.sign(cakey, "sha512")
+    return cert
+
+def sign_ca_req_new(nreq, cakey, serial):
+    assert not isinstance(cakey, _crypto.PKey)
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography import x509
+    from cryptography.x509.oid import NameOID
+    from cryptography.hazmat.primitives import hashes
+
+    builder = x509.CertificateBuilder()
+    builder = builder.serial_number(serial)
+    # cert.set_version(VERSION)
+
+    name_attrs = []
+    name_map = {attrib.rfc4514_attribute_name:attrib for attrib in nreq.subject}
+    name_attrs = [name_map[a] for a in ATTRIBS_TO_KEEP if a in name_map]
+    builder = builder.subject_name(x509.Name(name_attrs))
+    builder = builder.issuer_name(nreq.subject)
+    builder = builder.public_key(nreq.public_key())
+    # Validity times
+    now = datetime.datetime.now(datetime.timezone.utc)
+    builder = builder.not_valid_before(now)
+    builder = builder.not_valid_after(now + datetime.timedelta(seconds=CA_LIFE()))
+    builder = builder.add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+    builder = builder.add_extension(x509.KeyUsage( digital_signature=False, content_commitment=False, key_encipherment=False, data_encipherment=False, key_agreement=False, key_cert_sign=True, crl_sign=False, encipher_only=False, decipher_only=False,), critical=True)
+
+    sub_identifier = x509.SubjectKeyIdentifier.from_public_key(nreq.public_key())
+
+    builder = builder.add_extension(sub_identifier, critical=False)
+    builder = builder.add_extension(
+        x509.AuthorityKeyIdentifier(
+            key_identifier=sub_identifier.key_identifier,
+            authority_cert_serial_number=serial,
+            authority_cert_issuer=[
+                x509.DirectoryName(nreq.subject)
+            ],
+        ),
+        critical=False,
+    )
+    cert = builder.sign(cakey, hashes.SHA512())
+    return cert
+
+
+def sign_ca_req(req, cacert, cakey):
+    # Validate Subject contents. Not necessary for CA gen, but kept anyhow
+    matching_template(req, cacert)
+
+    # Validate signature
+    req.verify(req.get_pubkey())
+
+    nreq = req.to_cryptography()
+    assert nreq.is_signature_valid is True
+
+
+    request_subject = components(req.get_subject())
+    request_subject_2 = components2(nreq.subject)
+
+    assert request_subject_2 == request_subject
+
+    serial = int(uuid.uuid1())
+    cert = sign_ca_req_old(req, cacert, cakey, serial)
+    cert2 = sign_ca_req_new(nreq, cakey.to_cryptography_key(), serial)
+    cert2 = _crypto.X509.from_cryptography(cert2)
+
+
+    orig_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert).decode("utf8")
+    new_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert2).decode("utf8")
+    assert orig_pem == new_pem, f"Mismatching pem   \n{orig_pem}\n{new_pem}\n"
+
     return cert
 
 
