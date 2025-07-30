@@ -1,12 +1,15 @@
-import caramel
-import OpenSSL.crypto as _crypto
-import fixtures
-
 import datetime
-import argparse
+import fixtures
 import uuid
-import os
+
 import OpenSSL.crypto as _crypto
+import caramel
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
+
 
 REQ_VERSION = 0x00
 VERSION = 0x2
@@ -32,6 +35,7 @@ EXTENSIONS = [
         value=b"nonRepudiation,digitalSignature,keyEncipherment",
     ),
 ]
+
 
 # Hack hack. :-)
 def CA_LIFE():
@@ -144,11 +148,6 @@ def sign_ca_req_old(req, cacert, cakey, serial):
 
 def sign_ca_req_new(nreq, cakey, serial):
     assert not isinstance(cakey, _crypto.PKey)
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography import x509
-    from cryptography.x509.oid import NameOID
-    from cryptography.hazmat.primitives import hashes
 
     builder = x509.CertificateBuilder()
     builder = builder.serial_number(serial)
@@ -217,11 +216,14 @@ def sign_ca_req(req, cacert, cakey):
     cert2 = sign_ca_req_new(nreq, cakey.to_cryptography_key(), serial)
     cert2 = _crypto.X509.from_cryptography(cert2)
 
-    orig_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert).decode("utf8")
-    new_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert2).decode("utf8")
-    assert orig_pem == new_pem, f"Mismatching pem   \n{orig_pem}\n{new_pem}\n"
-
+    cmp_crt(cert, cert2)
     return cert
+
+
+def cmp_crt(old, new):
+    old_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, old).decode("utf8")
+    new_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, new).decode("utf8")
+    assert old_pem == new_pem, f"Mismatching pem\n{old_pem}\n{new_pem}\n"
 
 
 def create_ca_req_old(subject, key):
@@ -238,8 +240,6 @@ def create_ca_req_old(subject, key):
     return req
 
 
-from cryptography.x509.oid import NameOID
-
 NAME_TO_OID = {
     "C": NameOID.COUNTRY_NAME,
     "ST": NameOID.STATE_OR_PROVINCE_NAME,
@@ -251,7 +251,6 @@ NAME_TO_OID = {
 
 
 def subject_to_name(subject):
-    from cryptography import x509
 
     res = []
     for k, v in subject:
@@ -261,11 +260,6 @@ def subject_to_name(subject):
 
 def create_ca_req_new(subject, key):
     assert not isinstance(key, _crypto.PKey)
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography import x509
-    from cryptography.x509.oid import NameOID
-    from cryptography.hazmat.primitives import hashes
 
     attrs = subject_to_name(subject)
 
@@ -299,13 +293,8 @@ def create_ca_req(subject):
     nreq = create_ca_req_new(subject, key.to_cryptography_key())
 
     req2 = _crypto.X509Req.from_cryptography(nreq)
-    orig_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, req).decode(
-        "utf8"
-    )
-    new_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, req2).decode(
-        "utf8"
-    )
-    assert orig_pem == new_pem, f"{orig_pem}  {new_pem}"
+
+    cmp_req(req, req2)
     return key, req
 
 
@@ -325,11 +314,6 @@ def create_req_old(subject, key):
 
 
 def create_req_new(subject, key):
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography import x509
-    from cryptography.x509.oid import NameOID
-    from cryptography.hazmat.primitives import hashes
 
     assert not isinstance(key, _crypto.PKey)
 
@@ -357,6 +341,12 @@ def create_req_new(subject, key):
     return req
 
 
+def cmp_req(old, new):
+    old_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, old).decode("utf8")
+    new_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, new).decode("utf8")
+    assert old_pem == new_pem, f"CSR Mismatch\n{old_pem}\n{new_pem}\n"
+
+
 def create_req(subject):
     key = _crypto.PKey()
     key.generate_key(_crypto.TYPE_RSA, 2048)
@@ -364,13 +354,7 @@ def create_req(subject):
     req2 = create_req_new(subject, key.to_cryptography_key())
 
     req2 = _crypto.X509Req.from_cryptography(req2)
-    orig_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, req).decode(
-        "utf8"
-    )
-    new_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, req2).decode(
-        "utf8"
-    )
-    assert orig_pem == new_pem, f"Mismatch\n{orig_pem}\n{new_pem}\n"
+    cmp_req(req, req2)
 
     return key, req
 
@@ -386,15 +370,17 @@ def create_expired(req, ca_cert, ca_key):
     cert2 = create_expired_new(
         req.to_cryptography(), ca_cert.to_cryptography(), ca_key.to_cryptography_key()
     )
+    cert2 = _crypto.X509.from_cryptography(cert2)
+    cmp_crt(cert, cert2)
     return cert
 
 
 def create_expired_old(req, ca_cert, ca_key):
     cert = _crypto.X509()
-    cert.set_subject(treq.get_subject())
+    cert.set_subject(req.get_subject())
     cert.set_serial_number(104)
-    cert.set_issuer(ca.cert.get_subject())
-    cert.set_pubkey(treq.get_pubkey())
+    cert.set_issuer(ca_cert.get_subject())
+    cert.set_pubkey(req.get_pubkey())
     cert.set_version(caramel.models.X509_V3)
     cert.gmtime_adj_notBefore(-86400 * 10 * 366)
     cert.gmtime_adj_notAfter(-86400 * 9 * 366)
@@ -421,30 +407,29 @@ def create_expired_old(req, ca_cert, ca_key):
             b"authorityKeyIdentifier",
             critical=False,
             value=b"issuer:always,keyid:always",
-            issuer=ca.cert,
+            issuer=ca_cert,
         )
     ]
     cert.add_extensions(extensions)
     bits = cert.get_pubkey().bits()
-    cert.sign(ca.key, caramel.models.HASH[bits])
+    cert.sign(ca_key, caramel.models.HASH[bits])
     return cert
 
 
 def create_expired_new(req, ca_cert, ca_key):
     assert not isinstance(ca_key, _crypto.PKey)
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography import x509
-    from cryptography.x509.oid import NameOID
-    from cryptography.hazmat.primitives import hashes
 
     builder = x509.CertificateBuilder()
     builder = builder.serial_number(104)
     builder = builder.subject_name(req.subject)
     builder = builder.issuer_name(ca_cert.subject)
     builder = builder.public_key(req.public_key())
-    before = datetime.datetime.now() - datetime.timedelta(seconds=86400 * 10 * 366)
-    after = datetime.datetime.now() - datetime.timedelta(seconds=86400 * 9 * 366)
+    before = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+        seconds=86400 * 10 * 366
+    )
+    after = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+        seconds=86400 * 9 * 366
+    )
     print(before, after)
     builder = builder.not_valid_before(before)
     builder = builder.not_valid_after(after)
@@ -481,15 +466,10 @@ def create_expired_new(req, ca_cert, ca_key):
         ),
         critical=False,
     )
-    HASH = {1024: "sha1", 2048: "sha256", 4096: "sha512"}
+    HASH = {1024: hashes.SHA1, 2048: hashes.SHA256, 4096: hashes.SHA512}
 
     bits = req.public_key().key_size
-    if bits == 2048:
-        out = builder.sign(ca_key, hashes.SHA256())
-    elif bits == 4096:
-        out = builder.sign(ca_key, hashes.SHA512())
-    else:
-        raise ValueError("Unsupported size")
+    out = builder.sign(ca_key, HASH[bits]())
     return out
 
 
@@ -509,39 +489,41 @@ def write_files(key, keyname, cert, certname):
 CA_KEY_FILE = "fixtures.ca.key"
 CA_CRT_FILE = "fixtures.ca.crt"
 
-ca_template = fixtures.CertificateData.ca_cert.subject
-key, req, cert = create_ca(ca_template)
-write_files(key=key, keyname=CA_KEY_FILE, cert=cert, certname=CA_CRT_FILE)
-ca = caramel.models.SigningCert.from_files(CA_CRT_FILE, CA_KEY_FILE)
+
+def main():
+    ca_template = fixtures.CertificateData.ca_cert.subject
+    key, req, cert = create_ca(ca_template)
+    write_files(key=key, keyname=CA_KEY_FILE, cert=cert, certname=CA_CRT_FILE)
+    ca = caramel.models.SigningCert.from_files(CA_CRT_FILE, CA_KEY_FILE)
+
+    # Initial certs data
+    tkey, treq = create_req(fixtures.CSRData.initial.subject_components)
+    csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
+    csr = caramel.models.CSR("fakeshasum", csr_pem)
+    cert = caramel.models.Certificate.sign(csr, ca)
+    print("initial\n", csr.pem.decode("utf8"), cert.pem.decode("utf8"))
+
+    # Empty subject cert
+    tkey, treq = create_req(fixtures.CSRData.empty_subject.subject_components)
+    csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
+    csr = caramel.models.CSR("fakeshasum", csr_pem)
+    cert = caramel.models.Certificate.sign(csr, ca)
+    print("empty_subject\n", csr.pem.decode("utf8"), cert.pem.decode("utf8"))
+
+    # Good crt
+    tkey, treq = create_req(fixtures.CSRData.good.subject_components)
+    csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
+    csr = caramel.models.CSR("fakeshasum", csr_pem)
+    cert = caramel.models.Certificate.sign(csr, ca)
+    print("good\n", csr.pem.decode("utf8"), cert.pem.decode("utf8"))
+
+    # Expired  crt
+    tkey, treq = create_req(fixtures.CSRData.with_expired_cert.subject_components)
+    csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
+    cert = create_expired(req, ca.cert, ca.key)
+    crt_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
+    print("expired\n", csr_pem.decode("utf8"), crt_pem.decode("utf8"))
 
 
-# Initial certs data
-tkey, treq = create_req(fixtures.CSRData.initial.subject_components)
-csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
-csr = caramel.models.CSR("fakeshasum", csr_pem)
-cert = caramel.models.Certificate.sign(csr, ca)
-print("initial\n", csr.pem.decode("utf8"), cert.pem.decode("utf8"))
-
-
-# Empty subject cert
-tkey, treq = create_req(fixtures.CSRData.empty_subject.subject_components)
-csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
-csr = caramel.models.CSR("fakeshasum", csr_pem)
-cert = caramel.models.Certificate.sign(csr, ca)
-print("empty_subject\n", csr.pem.decode("utf8"), cert.pem.decode("utf8"))
-
-
-# Good crt
-tkey, treq = create_req(fixtures.CSRData.good.subject_components)
-csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
-csr = caramel.models.CSR("fakeshasum", csr_pem)
-cert = caramel.models.Certificate.sign(csr, ca)
-print("good\n", csr.pem.decode("utf8"), cert.pem.decode("utf8"))
-
-
-# Expired  crt
-tkey, treq = create_req(fixtures.CSRData.with_expired_cert.subject_components)
-csr_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, treq)
-cert = create_expired(req, ca.cert, ca.key)
-crt_pem = _crypto.dump_certificate(_crypto.FILETYPE_PEM, cert)
-print("expired\n", csr_pem.decode("utf8"), crt_pem.decode("utf8"))
+if __name__ == "__main__":
+    main()
