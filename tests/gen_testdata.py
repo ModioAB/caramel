@@ -137,10 +137,8 @@ def sign_ca_req(req, cacert, cakey):
     return cert
 
 
-def create_ca_req(subject):
-    key = _crypto.PKey()
-    key.generate_key(_crypto.TYPE_RSA, CA_BITS)
-
+def create_ca_req_old(subject, key):
+    assert isinstance(key, _crypto.PKey)
     req = _crypto.X509Req()
     req.set_version(REQ_VERSION)
     req.set_pubkey(key)
@@ -148,10 +146,76 @@ def create_ca_req(subject):
     x509subject = req.get_subject()
     for k, v in subject:
         setattr(x509subject, k, v)
-
     req.add_extensions(CA_EXTENSIONS)
-
     req.sign(key, "sha512")
+    return req
+
+
+def subject_to_name(subject):
+    from cryptography import x509
+    from cryptography.x509.oid import NameOID
+
+    attrmap = {
+        "C": NameOID.COUNTRY_NAME,
+        "ST": NameOID.STATE_OR_PROVINCE_NAME,
+        "L": NameOID.LOCALITY_NAME,
+        "O": NameOID.ORGANIZATION_NAME,
+        "OU": NameOID.ORGANIZATIONAL_UNIT_NAME,
+        "CN": NameOID.COMMON_NAME,
+    }
+    res = []
+    for k, v in subject:
+        res.append(x509.NameAttribute(attrmap[k], v))
+    return res
+
+
+def create_ca_req_new(subject, key):
+    assert not isinstance(key, _crypto.PKey)
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography import x509
+    from cryptography.x509.oid import NameOID
+    from cryptography.hazmat.primitives import hashes
+
+    attrs = subject_to_name(subject)
+
+    nreq = (
+        x509.CertificateSigningRequestBuilder()
+        .subject_name(x509.Name(attrs))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+        .add_extension(
+            x509.KeyUsage(
+                digital_signature=False,
+                content_commitment=False,
+                key_encipherment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                key_cert_sign=True,
+                crl_sign=False,
+                encipher_only=False,
+                decipher_only=False,
+            ),
+            critical=True,
+        )
+        .sign(key, hashes.SHA512())
+    )
+    return nreq
+
+
+def create_ca_req(subject):
+    key = _crypto.PKey()
+    key.generate_key(_crypto.TYPE_RSA, CA_BITS)
+    req = create_ca_req_old(subject, key)
+    nreq = create_ca_req_new(subject, key.to_cryptography_key())
+
+    req2 = _crypto.X509Req.from_cryptography(nreq)
+    orig_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, req).decode(
+        "utf8"
+    )
+    new_pem = _crypto.dump_certificate_request(_crypto.FILETYPE_PEM, req2).decode(
+        "utf8"
+    )
+    assert orig_pem == new_pem, f"{orig_pem}  {new_pem}"
     return key, req
 
 
