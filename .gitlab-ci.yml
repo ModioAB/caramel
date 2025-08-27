@@ -92,7 +92,7 @@ caramel:pylint:
   image: ${PYTHON_IMAGE}
   before_script:
     - python3 -m pip install pylint pylint-exit
-    - python3 setup.py develop
+    - python3 -m pip install -e .
   script:
       - pylint --rcfile=setup.cfg caramel/ tests/ || pylint-exit --error-fail $?
 
